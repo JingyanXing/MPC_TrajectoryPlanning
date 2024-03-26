@@ -1,0 +1,1 @@
+/usr/bin/c++ -rdynamic CMakeFiles/main.dir/main.cc.o -o main  map/libmap.a solver/libsolver.a vehicle/libvehicle.a data/libdata.a test/libtest.a -lcasadi vehicle/libvehicle.a map/libmap.a solver/libsolver.a -lcasadi data/libdata.a 

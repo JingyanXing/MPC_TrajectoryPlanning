@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsolver.a CMakeFiles/solver.dir/lat_mpc_solver.cc.o CMakeFiles/solver.dir/lon_mpc_solver.cc.o
+/usr/bin/ranlib libsolver.a

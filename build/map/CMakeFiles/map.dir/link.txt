@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmap.a CMakeFiles/map.dir/map.cc.o CMakeFiles/map.dir/obstacle.cc.o
+/usr/bin/ranlib libmap.a

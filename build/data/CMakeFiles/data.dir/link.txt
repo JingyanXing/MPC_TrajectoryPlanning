@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdata.a CMakeFiles/data.dir/savedata.cc.o
+/usr/bin/ranlib libdata.a
