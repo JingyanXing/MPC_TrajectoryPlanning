@@ -31,6 +31,7 @@ public:
     ROAD_MAP(double length, int static_obstacle_num, int dynamic_obstacle_num);
     //初始化时生成指定位置的障碍物,障碍物按x位置升序排序
     ROAD_MAP(double length, std::vector<Obstacle> static_obstacle, std::vector<Obstacle> dynamic_obstacle);
+    ROAD_MAP();
     //检查是否堵塞
     bool check_block();
     ~ROAD_MAP();
@@ -44,8 +45,9 @@ public:
     std::vector<point> refer_line;
     std::unordered_set<std::string> obstacle_set; //已经搜索过的障碍物加入集合，防止重复搜索
 
-    void update(point pos, double width, std::vector<point>& refer_line, ROAD_MAP& map);
+    void update(point pos, int refer_line_index, double width, std::vector<point>& refer_line, ROAD_MAP& map);//车辆位置，车辆宽度
     ReferenceLine(point pos, double width, ROAD_MAP& map);
+    ReferenceLine();
     ~ReferenceLine();
 };
 

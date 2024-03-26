@@ -7,11 +7,6 @@ project(MPC_trajectory)
 # CMake module(s) path
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 
-include_directories(
-  # include
-  ${catkin_INCLUDE_DIRS}
-)
-
 
 # 查找当前目录下的所有源文件
 # 并将名称保存到 DIR_SRCS 变量
@@ -30,6 +25,7 @@ include_directories(
   ${PROJECT_SOURCE_DIR}/vehicle
   ${PROJECT_SOURCE_DIR}/data
   ${PROJECT_SOURCE_DIR}/test
+  ${catkin_INCLUDE_DIRS}
 )
 
 # 指定生成目标 

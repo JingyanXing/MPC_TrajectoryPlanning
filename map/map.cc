@@ -62,6 +62,7 @@ ROAD_MAP::ROAD_MAP(double length, std::vector<Obstacle> static_obstacle, std::ve
     std::cout << "地图初始化成功" << std::endl;
 }
 
+ROAD_MAP::ROAD_MAP(){};
 
 ROAD_MAP::~ROAD_MAP(){
     std::cout << "地图析构成功" << std::endl;
@@ -85,7 +86,8 @@ void InsertPoint(std::vector<point>& refer_line)
 }
 
 
-void ReferenceLine::update(point pos, double width, std::vector<point>& refer_line, ROAD_MAP& map){
+void ReferenceLine::update(point pos, int refer_line_index, double width, std::vector<point>& refer_line, ROAD_MAP& map){
+    if(refer_line_index != 0) refer_line.erase(refer_line.begin(), refer_line.begin() + refer_line_index);
     double buffer = 35; // 换道缓冲距离
     double tmp_y;
     if(abs(tmp_y - map.middleline1[0].y) <= abs(tmp_y - map.middleline2[0].y)) tmp_y = map.middleline1[0].y;
@@ -158,8 +160,10 @@ void ReferenceLine::update(point pos, double width, std::vector<point>& refer_li
 }
 
 ReferenceLine::ReferenceLine(point pos, double width, ROAD_MAP& map){
-    update(pos, width, this->refer_line, map);
+    this->update(pos, 0, width, this->refer_line, map);
     std::cout << "参考线初始化成功" << std::endl;
 }
+
+ReferenceLine::ReferenceLine(){};
 
 ReferenceLine::~ReferenceLine(){};
