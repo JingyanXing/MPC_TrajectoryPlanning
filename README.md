@@ -2,9 +2,9 @@
 项目依赖<br>
 Casadi,cmake,python及相关库<br>
 
-项目下载：git clone https://github.com/JingyanXing/MPC_TrajectoryPlanning.git && cd MPC_TrajectoryPlanning && mkdir build<br>
+项目下载：git clone https://github.com/JingyanXing/MPC_TrajectoryPlanning.git && cd MPC_TrajectoryPlanning <br>
 在项目MPC_TrajectoryPlanning目录下<br>
-执行编译指令：cd build && cmake .. && make<br>
+执行编译指令：cd build && cmake .. && make(build文件夹已上传，无需重复编译)<br>
 测试是否安装成功：./main<br>
 
 项目main文件中内置两个测试：<br>
