@@ -1,10 +1,16 @@
+项目采用横纵向解耦的MPC轨迹规划方法，在单向双车道场景下针对动、静态障碍物生成轨迹，直接使用c++调用casadi构建qp问题求解。<br>
+预期实现：<br>
+    1.参考Openpilot及Apollo框架，在车辆行驶过程中考虑自车与障碍物状态的参考线动态更新<br>
+    2.参考Openpilot及Apollo框架，基于简化的车辆运动学建模的横纵向解耦MPC轨迹规划<br>
+    3.基于进程通信实现车辆位姿信息的动态显示<br>
+
 --------------------------------------------------------------    安装说明    --------------------------------------------------------------<br>
 项目依赖<br>
 Casadi,cmake,python及相关库<br>
 
 项目下载：git clone https://github.com/JingyanXing/MPC_TrajectoryPlanning.git && cd MPC_TrajectoryPlanning <br>
 在项目MPC_TrajectoryPlanning目录下<br>
-执行编译指令：cd build && cmake .. && make(build文件夹已上传，无需重复编译)<br>
+~~执行编译指令：cd build && cmake .. && make~~(build文件夹已上传，无需重复编译)<br>
 测试是否安装成功：./main<br>
 
 项目main文件中内置两个测试：<br>
