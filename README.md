@@ -8,10 +8,10 @@
 项目依赖<br>
 Casadi,cmake,python及相关库<br>
 
-项目下载：git clone https://github.com/JingyanXing/MPC_TrajectoryPlanning.git && cd MPC_TrajectoryPlanning <br>
+项目下载：**git clone https://github.com/JingyanXing/MPC_TrajectoryPlanning.git && cd MPC_TrajectoryPlanning** <br>
 在项目MPC_TrajectoryPlanning目录下<br>
 ~~执行编译指令：cd build && cmake .. && make~~(build文件夹已上传，无需重复编译)<br>
-测试是否安装成功：./main<br>
+测试是否安装成功：**./main**<br>
 
 项目main文件中内置两个测试：<br>
 ```c++
@@ -28,9 +28,10 @@ int main(){
 实现静态障碍物下参考线生成和轨迹规划<br>
 
 🟢更新于2024.03.26--------------------------------------------------------------<br>
-在Test.run方法中初步实现给定静态障碍物环境下车辆参考线的动态更新，规划轨迹的生成<br>
+在**Test.run**方法中初步实现给定静态障碍物环境下车辆参考线的动态更新，规划轨迹的生成<br>
 基于socket进行进程间通信实现车辆形心位置动态图像绘制<br>
-可视化启用方法：令起终端cd进入visual目录下， 执行 python visualserver.py。可视化服务端唤起，随后在原终端执行./main<br>
+可视化**visualserver**启用方法：令起终端cd进入**visual**目录下， 执行 **python visualserver.py**。可视化服务端唤起，随后在原终端执行**./main**<br>
 
-TODO:包含车辆轮廓的动态轨迹绘制，车辆速度，加速度，航向角，轮胎转角动态曲线绘制
-TODO:动态障碍物跟驰及超车<br>
+🟢更新于2024.04.03--------------------------------------------------------------<br>
+**visualserver**实现包含车辆轮廓的动态轨迹绘制，车辆速度，航向角，轮胎转角动态曲线绘制<br>
+TODO:车辆规划轨迹动态绘制，动态障碍物跟驰及超车<br>
