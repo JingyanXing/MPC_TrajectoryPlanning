@@ -28,12 +28,12 @@ def VisualServer():
     boundry1 = []
     boundry2 = []
     boundry3 = []
-    boundry_front_1 = [0] * 250
-    boundry_front_2 = [3.5] * 250
-    boundry_front_3 = [7] * 250
+    boundry_front_1 = [0] * 450
+    boundry_front_2 = [3.5] * 450
+    boundry_front_3 = [7] * 450
     data_index = 0
 
-    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
+    fig, axs = plt.subplots(5, 1, figsize=(10, 8))
     while True:
         recv_str = connection.recv(1024)
         recv_str = recv_str.decode("ascii")
@@ -53,22 +53,24 @@ def VisualServer():
         boundry3 = [7] * len(boundryx)
 
 
-        axs[0].cla()  # 清空第一个子图
-        axs[1].cla()  # 清空第二个子图
+        axs[0].cla()  # 清空子图
+        axs[1].cla()  
+        axs[2].cla()  
+        axs[3].cla()  
+        axs[4].cla()  
 
         """绘制车辆轨迹"""
         axs[0].plot(data.iloc[:, 0], data.iloc[:, 1],'-b') # 行驶轨迹
-        axs[0].plot(boundryx, boundry1, color='k', label='boundary0') 
-        axs[0].plot(boundryx, boundry2, color='k', label='boundary1')
-        axs[0].plot(boundryx, boundry3, color='k', label='boundary2')
+        axs[0].plot(boundryx, boundry1, color='k') 
+        axs[0].plot(boundryx, boundry2, color='k')
+        axs[0].plot(boundryx, boundry3, color='k')
         axs[0].set_title('Trajectory')
         axs[0].set_xlabel('X(m)')
         axs[0].set_ylabel('y(m)')
-        axs[0].legend()
 
         """绘制车辆姿态"""
         """以下顶点计算方法适用于小转向角"""
-        boundry_front = [(data.iloc[-1, 0] - 5 + 0.1 * i) for i in range(250)]
+        boundry_front = [(data.iloc[-1, 0] - 5 + 0.1 * i) for i in range(450)]
         axs[1].plot(boundry_front, boundry_front_1, color='k') 
         axs[1].plot(boundry_front, boundry_front_2, color='k')
         axs[1].plot(boundry_front, boundry_front_3, color='k')
@@ -83,9 +85,27 @@ def VisualServer():
                       lower_left[1] + 2 * half_diagonal * math.sin(dia_angle))
         rect = patches.Polygon([lower_left, lower_right, upper_right, upper_left], closed=True, edgecolor='r', facecolor='none')
         axs[1].add_patch(rect)  # 将矩形添加到当前子图中
-        axs[1].set_title('Position(m)')
+        axs[1].set_title('Realtime Position(m)')
         axs[1].set_xlabel('X(m)')
         axs[1].set_ylabel('y(m)')
+
+        """绘制车辆速度"""
+        axs[2].plot(data.iloc[:, 2], '-b') # 行驶轨迹
+        axs[2].set_title('Realtime Speed')
+        axs[2].set_xlabel('Time(0.1s)')
+        axs[2].set_ylabel('Speed(m/s)')
+
+        """绘制车辆航向角"""
+        axs[3].plot(data.iloc[:, 3], '-b') 
+        axs[3].set_title('Realtime Heading Angle')
+        axs[3].set_xlabel('Time(0.1s)')
+        axs[3].set_ylabel('Angle(rad)')
+
+        """绘制车辆轮胎转角"""
+        axs[4].plot(data.iloc[:, 4], '-b')
+        axs[4].set_title('Realtime Wheel Angle')
+        axs[4].set_xlabel('Time(0.1s)')
+        axs[4].set_ylabel('Angle(rad)')
         
         plt.pause(0.01)
         plt.tight_layout()
