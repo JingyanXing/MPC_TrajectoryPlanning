@@ -1,8 +1,14 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import time
 import socket
 import numpy as np
 import pandas as pd
+import math
+vehicle_length = 5
+vehicle_width = 1.9
+delta = math.atan(vehicle_width / vehicle_length)
+half_diagonal = (vehicle_width ** 2 + vehicle_length ** 2) ** 0.5 / 2
 
 
 def VisualServer():
@@ -17,26 +23,78 @@ def VisualServer():
     server.listen(5) # 监听传入的连接，参数指定在拒绝连接之前，操作系统可以挂起的最大连接数量。
     connection, address = server.accept()
 
-    plt.figure(figsize=(10, 8))
-    #pos
-    plt.subplot(5, 1, 1)
     data = pd.DataFrame(columns=['x', 'y', 'speed', 'headingAngle', 'wheelAngle'])
+    boundryx = []
+    boundry1 = []
+    boundry2 = []
+    boundry3 = []
+    boundry_front_1 = [0] * 250
+    boundry_front_2 = [3.5] * 250
+    boundry_front_3 = [7] * 250
     data_index = 0
+
+    fig, axs = plt.subplots(2, 1, figsize=(10, 8))
     while True:
         recv_str = connection.recv(1024)
         recv_str = recv_str.decode("ascii")
         if not recv_str:
             break
         
-        plt.clf() #清空画布上的所有内容
         data.loc[len(data)] = stringToList(recv_str)
-        plt.plot(data.iloc[:, 0], data.iloc[:, 1],'-r')
+        
+        #boundry
+        if len(boundryx) == 0:
+            boundryx.append(data.iloc[0, 0])
+        else:
+            while boundryx[-1] < data.iloc[-1, 0] + 25:
+                boundryx.append(boundryx[-1] + 0.1)
+        boundry1 = [0] * len(boundryx)
+        boundry2 = [3.5] * len(boundryx)
+        boundry3 = [7] * len(boundryx)
+
+
+        axs[0].cla()  # 清空第一个子图
+        axs[1].cla()  # 清空第二个子图
+
+        """绘制车辆轨迹"""
+        axs[0].plot(data.iloc[:, 0], data.iloc[:, 1],'-b') # 行驶轨迹
+        axs[0].plot(boundryx, boundry1, color='k', label='boundary0') 
+        axs[0].plot(boundryx, boundry2, color='k', label='boundary1')
+        axs[0].plot(boundryx, boundry3, color='k', label='boundary2')
+        axs[0].set_title('Trajectory')
+        axs[0].set_xlabel('X(m)')
+        axs[0].set_ylabel('y(m)')
+        axs[0].legend()
+
+        """绘制车辆姿态"""
+        """以下顶点计算方法适用于小转向角"""
+        boundry_front = [(data.iloc[-1, 0] - 5 + 0.1 * i) for i in range(250)]
+        axs[1].plot(boundry_front, boundry_front_1, color='k') 
+        axs[1].plot(boundry_front, boundry_front_2, color='k')
+        axs[1].plot(boundry_front, boundry_front_3, color='k')
+        dia_angle = delta + data.iloc[-1, 3]
+        lower_left = (data.iloc[-1, 0] - half_diagonal * math.cos(dia_angle), 
+                      data.iloc[-1, 1] - half_diagonal * math.sin(dia_angle)) # 左下顶点
+        lower_right = (lower_left[0] + vehicle_length * math.cos(data.iloc[-1, 3]), 
+                       lower_left[1] + vehicle_length * math.sin(data.iloc[-1, 3])) # 右下顶点
+        upper_left = (lower_left[0] - vehicle_width * math.sin(data.iloc[-1, 3]), 
+                      lower_left[1] + vehicle_width * math.cos(data.iloc[-1, 3]))
+        upper_right = (lower_left[0] + 2 * half_diagonal * math.cos(dia_angle), 
+                      lower_left[1] + 2 * half_diagonal * math.sin(dia_angle))
+        rect = patches.Polygon([lower_left, lower_right, upper_right, upper_left], closed=True, edgecolor='r', facecolor='none')
+        axs[1].add_patch(rect)  # 将矩形添加到当前子图中
+        axs[1].set_title('Position(m)')
+        axs[1].set_xlabel('X(m)')
+        axs[1].set_ylabel('y(m)')
+        
         plt.pause(0.01)
-
-
+        plt.tight_layout()
         send_str = "Visual Server is running"
         connection.send(bytes(send_str, encoding="ascii"))
-        time.sleep(0.1)
+        # time.sleep(0.1)
+
+
+        
 
     connection.close()
     server.close()
