@@ -116,7 +116,8 @@ void Test::run(Vehicle& vehicle, int step){
                                     + std::to_string(vehicle.pos_c.y) + ','
                                     + std::to_string(vehicle.speed) + ','
                                     + std::to_string(vehicle.headingAngle) + ','
-                                    + std::to_string(vehicle.wheelAngle));
+                                    + std::to_string(vehicle.wheelAngle) + ','
+                                    + vehicle.planning_trajectory);
         const char* send_info = vehicle_info.c_str();
         send(sock_client, send_info, strlen(send_info), 0);
 
