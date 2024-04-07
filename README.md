@@ -10,7 +10,7 @@ Casadi,cmake,python及相关库<br>
 
 项目下载：**git clone https://github.com/JingyanXing/MPC_TrajectoryPlanning.git && cd MPC_TrajectoryPlanning** <br>
 在项目MPC_TrajectoryPlanning目录下<br>
-~~执行编译指令：cd build && cmake .. && make~~(build文件夹已上传，无需重复编译)<br>
+cd build && cmake .. && make<br>
 测试是否安装成功：**./main**<br>
 
 项目main文件中内置两个测试：<br>
@@ -34,4 +34,7 @@ int main(){
 
 🟢更新于2024.04.03--------------------------------------------------------------<br>
 **visualserver**实现包含车辆轮廓的动态轨迹绘制，车辆速度，航向角，轮胎转角动态曲线绘制<br>
-**TODO**:车辆规划轨迹动态绘制，动态障碍物跟驰及超车<br>
+
+🟢更新于2024.04.07--------------------------------------------------------------<br>
+车辆规划轨迹动态绘制
+**TODO**:动态障碍物跟驰及超车<br>
