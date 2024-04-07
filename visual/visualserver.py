@@ -22,8 +22,11 @@ def VisualServer():
     server.bind(("localhost", 8888)) # 绑定到本地主机（localhost）的8888端口。可以随意更改，客户端和服务端需要使用相同的端口号。
     server.listen(5) # 监听传入的连接，参数指定在拒绝连接之前，操作系统可以挂起的最大连接数量。
     connection, address = server.accept()
-
-    data = pd.DataFrame(columns=['x', 'y', 'speed', 'headingAngle', 'wheelAngle'])
+    columns = ['x', 'y', 'speed', 'headingAngle', 'wheelAngle']
+    for i in range(20):
+        columns.append('x' + str(i))
+        columns.append('y' + str(i))
+    data = pd.DataFrame(columns=columns)
     boundryx = []
     boundry1 = []
     boundry2 = []
@@ -85,6 +88,14 @@ def VisualServer():
                       lower_left[1] + 2 * half_diagonal * math.sin(dia_angle))
         rect = patches.Polygon([lower_left, lower_right, upper_right, upper_left], closed=True, edgecolor='r', facecolor='none')
         axs[1].add_patch(rect)  # 将矩形添加到当前子图中
+        # 绘制规划轨迹
+        planning_trajectory_x = []
+        planning_trajectory_y = []
+        for i in range(20):
+            planning_trajectory_x.append(data.iloc[-1, 5 + 2 * i])
+            planning_trajectory_y.append(data.iloc[-1, 6 + 2 * i])
+        axs[1].plot(planning_trajectory_x, planning_trajectory_y, color='b')
+
         axs[1].set_title('Realtime Position(m)')
         axs[1].set_xlabel('X(m)')
         axs[1].set_ylabel('y(m)')
