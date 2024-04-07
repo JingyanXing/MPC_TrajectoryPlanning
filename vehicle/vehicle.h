@@ -1,6 +1,7 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
+#include <vector>
 #include "map.h"
 #include "lon_mpc_solver.h"
 #include "lat_mpc_solver.h"
@@ -32,6 +33,7 @@ public:
     double MAX_JERK = 3;//最大加加速度
     ReferenceLine refer_line;//参考线
     ROAD_MAP map;
+    std::string planning_trajectory = "";
 
     Vehicle(){};
     Vehicle(point pos, double speed, double acc, double expect_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP map);

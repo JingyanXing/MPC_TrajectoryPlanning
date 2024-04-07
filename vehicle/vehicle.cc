@@ -12,6 +12,9 @@ Vehicle::Vehicle(point pos, double speed, double acc, double expect_speed,
     this->wheelAngle = wheelAngle;
     this->map = map;
     this->refer_line = ReferenceLine(this->pos_c, this->width, this->map);
+    for(int i = 0; i < 20; i++){
+        this->planning_trajectory += std::to_string(pos.x + this->speed * 0.1 * i) + ',' + std::to_string(pos.y) + ',';
+    }
     std::cout<< "车辆初始化成功" << std::endl;
 }
 
@@ -110,13 +113,26 @@ void Vehicle::drive(){
     //横向mpc求解器
     casadi::DM heading_angle_rate_dot = LatMpcSolver(this->pos_c.x, this->pos_c.y, this->headingAngle, this->headingAngleRate, refer_point.back()[0], 
                                                     refer_point.back()[1], refer_point.back()[3], refer_point.back()[3] - refer_point[19][3], 
-                                                    ref_speed, lower_l, upper_l, this->MAX_WHEELANGLE, this->MAX_HEADINGANGLE,this->MAX_SPEED, this->wheelBase)(0);
+                                                    ref_speed, lower_l, upper_l, this->MAX_WHEELANGLE, this->MAX_HEADINGANGLE,this->MAX_SPEED, this->wheelBase);
+    //更新规划轨迹
+    std::vector<double> tmp_state = {this->pos_c.x, this->pos_c.y, this->speed, this->acc, this->headingAngle, this->headingAngleRate};
+    this->planning_trajectory.clear();
+    for(int i = 1; i <= 20; i++){
+        tmp_state[0] += tmp_state[2] * 0.1 * cos(tmp_state[4]);
+        tmp_state[1] += tmp_state[2] * 0.1 * sin(tmp_state[4]);
+        tmp_state[2] += tmp_state[3] * 0.1;
+        tmp_state[3] += (double)j(i - 1);
+        tmp_state[4] += tmp_state[5] * 0.1;
+        tmp_state[5] += (double)heading_angle_rate_dot(i - 1) * 0.1;
+        this->planning_trajectory += std::to_string(tmp_state[0]) + ',' + std::to_string(tmp_state[1]) + ',';
+    }
+    this->planning_trajectory.pop_back();
     //更新车辆状态
     this->pos_c.x += this->speed * 0.1 * cos(this->headingAngle);
     this->pos_c.y += this->speed * 0.1 * sin(this->headingAngle);
     this->headingAngle += this->headingAngleRate * 0.1;
-    this->headingAngleRate += (double)heading_angle_rate_dot * 0.1;
-    this->wheelAngle = (double)atan2(heading_angle_rate_dot * this->wheelBase, this->speed + 0.001); //避免速度为0
+    this->headingAngleRate += (double)heading_angle_rate_dot(0) * 0.1;
+    this->wheelAngle = (double)atan2((double)heading_angle_rate_dot(0) * this->wheelBase, this->speed + 0.001); //避免速度为0
     this->speed += this->acc * 0.1;
     this->acc += (double)j(0);
     this->saveVehicleState();
