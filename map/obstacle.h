@@ -12,7 +12,7 @@ public:
     double width;
     bool is_dynamic = false;
     std::string name;
-    double velocity = 0.0;
+    double speed = 0.0;
     point pos;
     //生成轮廓位置
     //              头  
@@ -28,7 +28,7 @@ public:
     //障碍物类型type
     //静态障碍物初始化
     Obstacle(int type, point pos, std::string name);
-    Obstacle(int type, point pos, std::string name, double velocity);
+    Obstacle(int type, point pos, std::string name, double speed);
     ~Obstacle() = default;
 };
 

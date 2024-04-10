@@ -1,7 +1,7 @@
 #include "vehicle.h"
 
 Vehicle::Vehicle(point pos, double speed, double acc, double expect_speed, 
-                double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP map){
+                double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map){
     this->pos_c = pos;
     this->speed = speed;
     this->acc = acc;
@@ -11,7 +11,7 @@ Vehicle::Vehicle(point pos, double speed, double acc, double expect_speed,
     this->headingAngleRate = headingAngleRate;
     this->wheelAngle = wheelAngle;
     this->map = map;
-    this->refer_line = ReferenceLine(this->pos_c, this->width, this->map);
+    this->refer_line = ReferenceLine(this->pos_c, this->speed, this->expect_speed, this->width, this->map);
     for(int i = 0; i < 20; i++){
         this->planning_trajectory += std::to_string(pos.x + this->speed * 0.1 * i) + ',' + std::to_string(pos.y) + ',';
     }
@@ -139,9 +139,9 @@ void Vehicle::drive(){
     int new_refer_line_index = this->refer_line_index;
     while(refer_line.refer_line[new_refer_line_index].x < this->pos_c.x) new_refer_line_index++;
     this->refer_line_index = new_refer_line_index;
-
+    this->map.updateDynamicObstacle();
     if(this->refer_line_index > 30){
-        this->refer_line.update(this->pos_c, this->refer_line_index, this->width, this->refer_line.refer_line, this->map);
+        this->refer_line.update(this->pos_c, this->speed, this->expect_speed, this->refer_line_index, this->width, this->refer_line.refer_line, this->map);
         this->refer_line_index = 0;
     }
 }

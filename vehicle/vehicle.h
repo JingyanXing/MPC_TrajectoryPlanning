@@ -36,7 +36,7 @@ public:
     std::string planning_trajectory = "";
 
     Vehicle(){};
-    Vehicle(point pos, double speed, double acc, double expect_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP map);
+    Vehicle(point pos, double speed, double acc, double expect_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map);
     void drive();
     void ToFrenetMap(ROAD_MAP& map);
     void GetNearestObstacle(ROAD_MAP& map);

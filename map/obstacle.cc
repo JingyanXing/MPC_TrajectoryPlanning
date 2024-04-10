@@ -32,10 +32,10 @@ Obstacle::Obstacle(int type, point pos, std::string name){
     this->front_left.y = pos.y + this->width / 2;
 }
 
-Obstacle::Obstacle(int type, point pos, std::string name, double velocity){
+Obstacle::Obstacle(int type, point pos, std::string name, double speed){
     this->pos = pos;
     this->is_dynamic = true;
-    this->velocity = velocity;
+    this->speed = speed;
     this->name = name;
     switch(type){
         case 0:

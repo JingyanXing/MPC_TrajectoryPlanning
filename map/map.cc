@@ -69,6 +69,18 @@ ROAD_MAP::~ROAD_MAP(){
 }
 
 
+void ROAD_MAP::updateDynamicObstacle(){
+    if(this->dynamic_obstacle.empty()) return;
+    for(auto& obs : this->dynamic_obstacle){
+        obs.pos.x += obs.speed * 0.1;
+        obs.front_left.x += obs.speed * 0.1;
+        obs.front_right.x += obs.speed * 0.1;
+        obs.rear_left.x += obs.speed * 0.1;
+        obs.rear_right.x += obs.speed * 0.1;
+    }
+}
+
+
 void LinearInsertPoint(std::vector<point>& refer_line, point start_point, point end_point){
     int res = int((end_point.x - start_point.x - rear_buffer) / point_gap);
     double delta_y = (end_point.y - start_point.y) / res;
@@ -86,9 +98,9 @@ void InsertPoint(std::vector<point>& refer_line)
 }
 
 
-void ReferenceLine::update(point pos, int refer_line_index, double width, std::vector<point>& refer_line, ROAD_MAP& map){
+void ReferenceLine::update(point pos, double ego_speed, double target_speed, int refer_line_index, double width, std::vector<point>& refer_line, ROAD_MAP& map){
     if(refer_line_index != 0) refer_line.erase(refer_line.begin(), refer_line.begin() + refer_line_index);
-    double buffer = 35; // 换道缓冲距离
+    double buffer = (2 * ego_speed < target_speed) ? 5 * target_speed : 20 + 3 * ego_speed; // 换道缓冲距离,当自车速度与目标速度相差较大，加速较猛，需要拉长换道距离
     double tmp_y;
     if(abs(tmp_y - map.middleline1[0].y) <= abs(tmp_y - map.middleline2[0].y)) tmp_y = map.middleline1[0].y;
     else tmp_y = map.middleline2[0].y;
@@ -102,14 +114,12 @@ void ReferenceLine::update(point pos, int refer_line_index, double width, std::v
         }
         if(obs.pos.x > pos.x + this->sensoryRange) break;
     }
-
     for(auto& obs : map.dynamic_obstacle){
         // 如果在通讯范围内且没有被搜索过
-        if(obs.pos.x <= pos.x + this->sensoryRange && this->obstacle_set.find(obs.name) == this->obstacle_set.end()){
+        if(obs.pos.x <= pos.x + this->sensoryRange){
             obstacle_in_range.emplace_back(obs);
-            this->obstacle_set.insert(obs.name);
+            std::cout << "Dynamic obstacle";
         }
-        if(obs.pos.x > pos.x + this->sensoryRange) break;
     }
     // 按x方向位置排序
     sort(obstacle_in_range.begin(), obstacle_in_range.end(), [](Obstacle a, Obstacle b){
@@ -117,6 +127,7 @@ void ReferenceLine::update(point pos, int refer_line_index, double width, std::v
     });
     int obstacle_index = 0;
     if(refer_line.size() == 0) refer_line.push_back({pos.x, tmp_y});
+
     //参考线延长至150m，如遇到障碍物，为确保绕过，会适当延长,确保参考线的back().y在道路中心线
     while(refer_line.back().x <= pos.x + this->sensoryRange){
         //无障碍或障碍物已经遍历完
@@ -152,15 +163,39 @@ void ReferenceLine::update(point pos, int refer_line_index, double width, std::v
                         obstacle_index++;
                     }
                 }
-                //TODO:动态障碍物
+                //动态障碍物
+                else{
+                    // 计算动态障碍物和自车的碰撞时间TTC
+                    double TTC = (obstacle_in_range[obstacle_index].pos.x - pos.x) / (ego_speed - obstacle_in_range[obstacle_index].speed);
+                    std::cout << TTC << std::endl;
+                    // 在阈值范围内则进行换道
+                    if(0 <= TTC && TTC <= 5){
+                        //向右换道
+                        if(abs(obstacle_in_range[obstacle_index].pos.y - map.middleline2[0].y) < map.width / 2){
+                            point end_point(obstacle_in_range[obstacle_index].rear_left.x, map.middleline1[0].y);
+                            LinearInsertPoint(refer_line, refer_line.back(), end_point);
+                            obstacle_index++;
+                        }
+                        //向左换道
+                        else{
+                            point end_point(obstacle_in_range[obstacle_index].rear_left.x, map.middleline2[0].y);
+                            LinearInsertPoint(refer_line, refer_line.back(), end_point);
+                            obstacle_index++;
+                            std::cout << "yes" << std::endl;
+                        }
+                    }
+                    else{
+                        InsertPoint(refer_line);
+                    }
+                }
             }
         }
     }
 
 }
 
-ReferenceLine::ReferenceLine(point pos, double width, ROAD_MAP& map){
-    this->update(pos, 0, width, this->refer_line, map);
+ReferenceLine::ReferenceLine(point pos, double ego_speed, double target_speed, double width, ROAD_MAP& map){
+    this->update(pos, ego_speed, target_speed, 0, width, this->refer_line, map);
     std::cout << "参考线初始化成功" << std::endl;
 }
 
