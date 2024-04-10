@@ -2,8 +2,6 @@ vehicle/CMakeFiles/vehicle.dir/vehicle.cc.o: \
  /home/xjy/workspace/MPC_TrajectoryPlanning/vehicle/vehicle.cc \
  /usr/include/stdc-predef.h \
  /home/xjy/workspace/MPC_TrajectoryPlanning/vehicle/vehicle.h \
- /home/xjy/workspace/MPC_TrajectoryPlanning/vehicle/../map/map.h \
- /home/xjy/workspace/MPC_TrajectoryPlanning/vehicle/../map/obstacle.h \
  /usr/include/c++/11/vector /usr/include/c++/11/bits/stl_algobase.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/11/bits/os_defines.h \
@@ -45,11 +43,13 @@ vehicle/CMakeFiles/vehicle.dir/vehicle.cc.o: \
  /usr/include/c++/11/bits/functional_hash.h \
  /usr/include/c++/11/bits/hash_bytes.h \
  /usr/include/c++/11/bits/range_access.h \
- /usr/include/c++/11/bits/vector.tcc /usr/include/c++/11/iostream \
- /usr/include/c++/11/ostream /usr/include/c++/11/ios \
- /usr/include/c++/11/iosfwd /usr/include/c++/11/bits/stringfwd.h \
- /usr/include/c++/11/bits/postypes.h /usr/include/c++/11/cwchar \
- /usr/include/wchar.h \
+ /usr/include/c++/11/bits/vector.tcc \
+ /home/xjy/workspace/MPC_TrajectoryPlanning/vehicle/../map/map.h \
+ /home/xjy/workspace/MPC_TrajectoryPlanning/vehicle/../map/obstacle.h \
+ /usr/include/c++/11/iostream /usr/include/c++/11/ostream \
+ /usr/include/c++/11/ios /usr/include/c++/11/iosfwd \
+ /usr/include/c++/11/bits/stringfwd.h /usr/include/c++/11/bits/postypes.h \
+ /usr/include/c++/11/cwchar /usr/include/wchar.h \
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
  /usr/include/x86_64-linux-gnu/bits/floatn.h \
  /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
