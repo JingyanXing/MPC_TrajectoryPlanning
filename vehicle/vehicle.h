@@ -40,7 +40,7 @@ public:
     Vehicle(point pos, double speed, double acc, double expect_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map);
     void drive();
     void ToFrenetMap(ROAD_MAP& map);
-    void GetNearestObstacle(ROAD_MAP& map);
+    void GetObstacleInSensoryRange();
     void saveVehicleState();
     void CruiseControl();
     int checkRefPoint(int curr_point_index, double vehicle_pos_x, ReferenceLine& refer_line);

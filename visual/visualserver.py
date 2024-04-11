@@ -19,14 +19,13 @@ def stringToList(string):
 def receive_messages(connection):
     buffer = ""
     msg_list = []
-    msg_length = 1024
+    msg_length = 8000
     while True:
         data = connection.recv(msg_length).decode("ascii")
         buffer += data
         while "\n" in buffer:
             message, buffer = buffer.split("\n", 1)
             msg_list.append(stringToList(message))
-        
         # 当所有数据被读取完成后，会卡在data等待新的数据进入，造成循环无法退出，
         if data[-1] == '*':
             break
@@ -84,8 +83,15 @@ def VisualServer():
         
         vehicle_data.loc[len(vehicle_data)] = msg[0]
         obstacle_data = []
-        for i in range(1, len(msg)):
+        refer_line_data_x = []
+        refer_line_data_y = []
+        for i in range(1, len(msg) - 1):
             obstacle_data.append(msg[i])
+        for i in range(len(msg[-1])):
+            if i % 2 == 0:
+                refer_line_data_x.append(msg[-1][i])
+            else:
+                refer_line_data_y.append(msg[-1][i])
         
         #boundry
         if len(boundryx) == 0:
@@ -116,9 +122,9 @@ def VisualServer():
         """绘制车辆姿态"""
         """以下顶点计算方法适用于小转向角"""
         boundry_front = [(vehicle_data.iloc[-1, 0] - 5 + 0.1 * i) for i in range(450)]
-        axs[1].plot(boundry_front, boundry_front_1, color='k') 
-        axs[1].plot(boundry_front, boundry_front_2, color='k')
-        axs[1].plot(boundry_front, boundry_front_3, color='k')
+        axs[1].plot(boundryx, boundry1, color='k') 
+        axs[1].plot(boundryx, boundry2, color='k')
+        axs[1].plot(boundryx, boundry3, color='k')
         dia_angle = delta + vehicle_data.iloc[-1, 3]
         lower_left = (vehicle_data.iloc[-1, 0] - half_diagonal * math.cos(dia_angle), 
                       vehicle_data.iloc[-1, 1] - half_diagonal * math.sin(dia_angle)) # 左下顶点
@@ -135,13 +141,14 @@ def VisualServer():
                                     (obstacle[4], obstacle[5]), (obstacle[6], obstacle[7])], 
                                     closed=True, edgecolor='r', facecolor='none')
             axs[1].add_patch(rect)
-        # 绘制规划轨迹
+        # 绘制规划轨迹和参考线
         planning_trajectory_x = []
         planning_trajectory_y = []
         for i in range(20):
             planning_trajectory_x.append(vehicle_data.iloc[-1, 5 + 2 * i])
             planning_trajectory_y.append(vehicle_data.iloc[-1, 6 + 2 * i])
         axs[1].plot(planning_trajectory_x, planning_trajectory_y, color='b')
+        axs[1].plot(refer_line_data_x, refer_line_data_y, color='g')
 
         axs[1].set_title('Realtime Position(m)')
         axs[1].set_xlabel('X(m)')

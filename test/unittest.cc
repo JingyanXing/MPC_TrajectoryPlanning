@@ -127,12 +127,22 @@ void Test::run(Vehicle& vehicle, int step){
             obstacle_info += std::to_string(obs.front_left.x) + ',' + std::to_string(obs.front_left.y) + ',';
             obstacle_info += std::to_string(obs.rear_left.x) + ',' + std::to_string(obs.rear_left.y) + '\n';
         }
-        obstacle_info += '*'; // 消息结束符
+
+        std::string refer_line_info = "";
+        for(int i = 0; i < vehicle.refer_line.refer_line.size(); i++){
+            if(i % 10 == 0) 
+                refer_line_info += std::to_string(vehicle.refer_line.refer_line[i].x) + ',' + std::to_string(vehicle.refer_line.refer_line[i].y) + ',';
+        }
+        refer_line_info.pop_back();
+        refer_line_info += '\n'; 
+        refer_line_info += '*'; //消息结束识别符
 
         const char* send_info1 = vehicle_info.c_str();
         const char* send_info2 = obstacle_info.c_str();
+        const char* send_info3 = refer_line_info.c_str();
         send(sock_client, send_info1, strlen(send_info1), 0);
         send(sock_client, send_info2, strlen(send_info2), 0);
+        send(sock_client, send_info3, strlen(send_info3), 0);
 
         char recv_info[50];
         recv(sock_client, recv_info, sizeof(recv_info), 0);

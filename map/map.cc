@@ -98,6 +98,7 @@ void InsertPoint(std::vector<point>& refer_line)
 }
 
 
+
 void ReferenceLine::update(point pos, double ego_speed, double target_speed, int refer_line_index, double width, std::vector<point>& refer_line, ROAD_MAP& map){
     if(refer_line_index != 0) refer_line.erase(refer_line.begin(), refer_line.begin() + refer_line_index);
     double buffer = (2 * ego_speed < target_speed) ? 5 * target_speed : 20 + 3 * ego_speed; // 换道缓冲距离,当自车速度与目标速度相差较大，加速较猛，需要拉长换道距离
@@ -108,17 +109,15 @@ void ReferenceLine::update(point pos, double ego_speed, double target_speed, int
     // 查找通讯范围内的障碍物
     for(auto& obs : map.static_obstacle){
         // 如果在通讯范围内且没有被搜索过
-        if(obs.pos.x <= pos.x + this->sensoryRange && this->obstacle_set.find(obs.name) == this->obstacle_set.end()){
+        if(obs.pos.x <= pos.x + this->sensoryRange && obs.pos.x >= pos.x){
             obstacle_in_range.emplace_back(obs);
-            this->obstacle_set.insert(obs.name);
         }
         if(obs.pos.x > pos.x + this->sensoryRange) break;
     }
     for(auto& obs : map.dynamic_obstacle){
-        // 如果在通讯范围内且没有被搜索过
-        if(obs.pos.x <= pos.x + this->sensoryRange){
+        // 如果在通讯范围内
+        if(obs.pos.x <= pos.x + this->sensoryRange && obs.pos.x >= pos.x){
             obstacle_in_range.emplace_back(obs);
-            std::cout << "Dynamic obstacle";
         }
     }
     // 按x方向位置排序
@@ -167,22 +166,23 @@ void ReferenceLine::update(point pos, double ego_speed, double target_speed, int
                 else{
                     // 计算动态障碍物和自车的碰撞时间TTC
                     double TTC = (obstacle_in_range[obstacle_index].pos.x - pos.x) / (ego_speed - obstacle_in_range[obstacle_index].speed);
-                    std::cout << TTC << std::endl;
-                    // 在阈值范围内则进行换道
-                    if(0 <= TTC && TTC <= 5){
+                    // 在阈值范围内则进行换道，参考线重新生成
+                    if(0 <= TTC && TTC <= 5 + ego_speed){
+                        // this->obstacle_set.insert(obstacle_in_range[obstacle_index].name);
+                        refer_line.clear();
+                        refer_line.emplace_back(pos);
                         //向右换道
                         if(abs(obstacle_in_range[obstacle_index].pos.y - map.middleline2[0].y) < map.width / 2){
                             point end_point(obstacle_in_range[obstacle_index].rear_left.x, map.middleline1[0].y);
                             LinearInsertPoint(refer_line, refer_line.back(), end_point);
-                            obstacle_index++;
                         }
                         //向左换道
                         else{
                             point end_point(obstacle_in_range[obstacle_index].rear_left.x, map.middleline2[0].y);
                             LinearInsertPoint(refer_line, refer_line.back(), end_point);
-                            obstacle_index++;
-                            std::cout << "yes" << std::endl;
+                            
                         }
+                        obstacle_index++;
                     }
                     else{
                         InsertPoint(refer_line);

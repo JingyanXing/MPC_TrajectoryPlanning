@@ -55,7 +55,7 @@ void Vehicle::GetObstacleInSensoryRange(){
     // 查找通讯范围内的障碍物
     for(auto& obs : this->map.static_obstacle){
         // 如果在通讯范围内
-        if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x - this->sensoryRange){
+        if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x){
             this->obstacle_in_range.emplace_back(obs);
         }
     }
@@ -63,7 +63,7 @@ void Vehicle::GetObstacleInSensoryRange(){
     // 动态障碍物位置实时刷新
     for(auto& obs : this->map.dynamic_obstacle){
         // 如果在通讯范围内
-        if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x - this->sensoryRange){
+        if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x){
             obstacle_in_range.emplace_back(obs);
         }
     }
@@ -84,6 +84,8 @@ int Vehicle::checkRefPoint(int curr_point_index, double vehicle_pos_x, Reference
 
 
 void Vehicle::drive(){
+    this->obstacle_in_range.clear();
+    this->GetObstacleInSensoryRange();
     // 更新车辆位置
     //基于当前位置向前查找参考点
     std::vector<std::vector<double>> refer_point;
@@ -154,6 +156,8 @@ void Vehicle::drive(){
     while(refer_line.refer_line[new_refer_line_index].x < this->pos_c.x) new_refer_line_index++;
     this->refer_line_index = new_refer_line_index;
     this->map.updateDynamicObstacle();
+
+
     if(this->refer_line_index > 30){
         this->refer_line.update(this->pos_c, this->speed, this->expect_speed, this->refer_line_index, this->width, this->refer_line.refer_line, this->map);
         this->refer_line_index = 0;
