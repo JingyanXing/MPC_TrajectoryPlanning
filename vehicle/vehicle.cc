@@ -50,9 +50,23 @@ void Vehicle::saveVehicleState(){
     // std::cout << "数据已保存到 ../data/vehiclestate.csv" << std::endl;
 }
 
-void GetNearestObstacle(ROAD_MAP& map){
-    // 获取最近障碍物
+// 获取感知范围内障碍物，用于可视化
+void Vehicle::GetObstacleInSensoryRange(){
+    // 查找通讯范围内的障碍物
+    for(auto& obs : this->map.static_obstacle){
+        // 如果在通讯范围内
+        if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x - this->sensoryRange){
+            this->obstacle_in_range.emplace_back(obs);
+        }
+    }
 
+    // 动态障碍物位置实时刷新
+    for(auto& obs : this->map.dynamic_obstacle){
+        // 如果在通讯范围内
+        if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x - this->sensoryRange){
+            obstacle_in_range.emplace_back(obs);
+        }
+    }
 }
 
 
