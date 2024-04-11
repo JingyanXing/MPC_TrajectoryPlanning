@@ -34,6 +34,7 @@ public:
     ReferenceLine refer_line;//参考线
     ROAD_MAP map;
     std::string planning_trajectory = "";
+    std::vector<Obstacle> obstacle_in_range; //存储感知范围内所有障碍物
 
     Vehicle(){};
     Vehicle(point pos, double speed, double acc, double expect_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map);
