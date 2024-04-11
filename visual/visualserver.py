@@ -11,10 +11,29 @@ delta = math.atan(vehicle_width / vehicle_length)
 half_diagonal = (vehicle_width ** 2 + vehicle_length ** 2) ** 0.5 / 2
 
 
-def VisualServer():
-    def stringToList(string):
+def stringToList(string):
         return [float(x) for x in string.split(',')]
 
+
+# 当接收到的数据长度超出设定值，会导致数据被切割产生错误，所以单独写一个接收函数
+def receive_messages(connection):
+    buffer = ""
+    msg_list = []
+    msg_length = 1024
+    while True:
+        data = connection.recv(msg_length).decode("ascii")
+        buffer += data
+        while "\n" in buffer:
+            message, buffer = buffer.split("\n", 1)
+            msg_list.append(stringToList(message))
+        
+        # 当所有数据被读取完成后，会卡在data等待新的数据进入，造成循环无法退出，
+        if data[-1] == '*':
+            break
+    return msg_list
+
+
+def VisualServer():
     # 创建一个TCP套接字
     # 这一行创建了一个套接字（socket），并将其赋值给变量 server。
     # socket.socket() 函数用于创建套接字对象，AF_INET 参数指定了使用IPv4地址族，SOCK_STREAM 参数指定了使用TCP协议。
@@ -26,7 +45,7 @@ def VisualServer():
     for i in range(20):
         columns.append('x' + str(i))
         columns.append('y' + str(i))
-    data = pd.DataFrame(columns=columns)
+    vehicle_data = pd.DataFrame(columns=columns)
     boundryx = []
     boundry1 = []
     boundry2 = []
@@ -38,18 +57,41 @@ def VisualServer():
 
     fig, axs = plt.subplots(5, 1, figsize=(10, 8))
     while True:
-        recv_str = connection.recv(1024)
-        recv_str = recv_str.decode("ascii")
-        if not recv_str:
-            break
+        # recv_str = ""
+        # msg_idx = 0
+        # msg_length = 0
+        # while True:
+        #     # 当接收到的数据长度超出设定值，会导致数据被切割产生错误,所以首先接收消息长度
+        #     # if msg_idx == 0:
+        #     #     part = connection.recv(1025).decode("ascii")
+        #     #     msg_length = int(part) + 1024
+        #     #     msg_idx += 1
+        #     #     continue
+        #     # else:
+        #     #     part = connection.recv(msg_length).decode("ascii")
+        #     part = connection.recv(1024).decode("ascii")
+        #     if not part:
+        #         break
+        #     recv_str += part
+        #     if '\n' in part:
+        #         break
+        # print(index)
+        # index += 1
+        # info_list = recv_str.split('\n')
+        # vehicle_info = info_list[0]  # 车辆信息
+        # obstacle_info = info_list[1] if len(info_list) > 1 else None # 障碍物信息
+        msg = receive_messages(connection)
         
-        data.loc[len(data)] = stringToList(recv_str)
+        vehicle_data.loc[len(vehicle_data)] = msg[0]
+        obstacle_data = []
+        for i in range(1, len(msg)):
+            obstacle_data.append(msg[i])
         
         #boundry
         if len(boundryx) == 0:
-            boundryx.append(data.iloc[0, 0])
+            boundryx.append(vehicle_data.iloc[0, 0])
         else:
-            while boundryx[-1] < data.iloc[-1, 0] + 25:
+            while boundryx[-1] < vehicle_data.iloc[-1, 0] + 25:
                 boundryx.append(boundryx[-1] + 0.1)
         boundry1 = [0] * len(boundryx)
         boundry2 = [3.5] * len(boundryx)
@@ -63,7 +105,7 @@ def VisualServer():
         axs[4].cla()  
 
         """绘制车辆轨迹"""
-        axs[0].plot(data.iloc[:, 0], data.iloc[:, 1],'-b') # 行驶轨迹
+        axs[0].plot(vehicle_data.iloc[:, 0], vehicle_data.iloc[:, 1],'-b') # 行驶轨迹
         axs[0].plot(boundryx, boundry1, color='k') 
         axs[0].plot(boundryx, boundry2, color='k')
         axs[0].plot(boundryx, boundry3, color='k')
@@ -73,27 +115,32 @@ def VisualServer():
 
         """绘制车辆姿态"""
         """以下顶点计算方法适用于小转向角"""
-        boundry_front = [(data.iloc[-1, 0] - 5 + 0.1 * i) for i in range(450)]
+        boundry_front = [(vehicle_data.iloc[-1, 0] - 5 + 0.1 * i) for i in range(450)]
         axs[1].plot(boundry_front, boundry_front_1, color='k') 
         axs[1].plot(boundry_front, boundry_front_2, color='k')
         axs[1].plot(boundry_front, boundry_front_3, color='k')
-        dia_angle = delta + data.iloc[-1, 3]
-        lower_left = (data.iloc[-1, 0] - half_diagonal * math.cos(dia_angle), 
-                      data.iloc[-1, 1] - half_diagonal * math.sin(dia_angle)) # 左下顶点
-        lower_right = (lower_left[0] + vehicle_length * math.cos(data.iloc[-1, 3]), 
-                       lower_left[1] + vehicle_length * math.sin(data.iloc[-1, 3])) # 右下顶点
-        upper_left = (lower_left[0] - vehicle_width * math.sin(data.iloc[-1, 3]), 
-                      lower_left[1] + vehicle_width * math.cos(data.iloc[-1, 3]))
+        dia_angle = delta + vehicle_data.iloc[-1, 3]
+        lower_left = (vehicle_data.iloc[-1, 0] - half_diagonal * math.cos(dia_angle), 
+                      vehicle_data.iloc[-1, 1] - half_diagonal * math.sin(dia_angle)) # 左下顶点
+        lower_right = (lower_left[0] + vehicle_length * math.cos(vehicle_data.iloc[-1, 3]), 
+                       lower_left[1] + vehicle_length * math.sin(vehicle_data.iloc[-1, 3])) # 右下顶点
+        upper_left = (lower_left[0] - vehicle_width * math.sin(vehicle_data.iloc[-1, 3]), 
+                      lower_left[1] + vehicle_width * math.cos(vehicle_data.iloc[-1, 3]))
         upper_right = (lower_left[0] + 2 * half_diagonal * math.cos(dia_angle), 
                       lower_left[1] + 2 * half_diagonal * math.sin(dia_angle))
         rect = patches.Polygon([lower_left, lower_right, upper_right, upper_left], closed=True, edgecolor='r', facecolor='none')
         axs[1].add_patch(rect)  # 将矩形添加到当前子图中
+        for obstacle in obstacle_data:
+            rect = patches.Polygon([(obstacle[0], obstacle[1]), (obstacle[2], obstacle[3]), 
+                                    (obstacle[4], obstacle[5]), (obstacle[6], obstacle[7])], 
+                                    closed=True, edgecolor='r', facecolor='none')
+            axs[1].add_patch(rect)
         # 绘制规划轨迹
         planning_trajectory_x = []
         planning_trajectory_y = []
         for i in range(20):
-            planning_trajectory_x.append(data.iloc[-1, 5 + 2 * i])
-            planning_trajectory_y.append(data.iloc[-1, 6 + 2 * i])
+            planning_trajectory_x.append(vehicle_data.iloc[-1, 5 + 2 * i])
+            planning_trajectory_y.append(vehicle_data.iloc[-1, 6 + 2 * i])
         axs[1].plot(planning_trajectory_x, planning_trajectory_y, color='b')
 
         axs[1].set_title('Realtime Position(m)')
@@ -101,19 +148,19 @@ def VisualServer():
         axs[1].set_ylabel('y(m)')
 
         """绘制车辆速度"""
-        axs[2].plot(data.iloc[:, 2], '-b') # 行驶轨迹
+        axs[2].plot(vehicle_data.iloc[:, 2], '-b') # 行驶轨迹
         axs[2].set_title('Realtime Speed')
         axs[2].set_xlabel('Time(0.1s)')
         axs[2].set_ylabel('Speed(m/s)')
 
         """绘制车辆航向角"""
-        axs[3].plot(data.iloc[:, 3], '-b') 
+        axs[3].plot(vehicle_data.iloc[:, 3], '-b') 
         axs[3].set_title('Realtime Heading Angle')
         axs[3].set_xlabel('Time(0.1s)')
         axs[3].set_ylabel('Angle(rad)')
 
         """绘制车辆轮胎转角"""
-        axs[4].plot(data.iloc[:, 4], '-b')
+        axs[4].plot(vehicle_data.iloc[:, 4], '-b')
         axs[4].set_title('Realtime Wheel Angle')
         axs[4].set_xlabel('Time(0.1s)')
         axs[4].set_ylabel('Angle(rad)')
