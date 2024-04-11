@@ -117,9 +117,22 @@ void Test::run(Vehicle& vehicle, int step){
                                     + std::to_string(vehicle.speed) + ','
                                     + std::to_string(vehicle.headingAngle) + ','
                                     + std::to_string(vehicle.wheelAngle) + ','
-                                    + vehicle.planning_trajectory);
-        const char* send_info = vehicle_info.c_str();
-        send(sock_client, send_info, strlen(send_info), 0);
+                                    + vehicle.planning_trajectory) + '\n';
+
+        std::string obstacle_info = "";
+        // 每个障碍物的四个顶点坐标
+        for(auto& obs : vehicle.obstacle_in_range){
+            obstacle_info += std::to_string(obs.rear_right.x) + ',' + std::to_string(obs.rear_right.y) + ',';
+            obstacle_info += std::to_string(obs.front_right.x) + ',' + std::to_string(obs.front_right.y) + ',';
+            obstacle_info += std::to_string(obs.front_left.x) + ',' + std::to_string(obs.front_left.y) + ',';
+            obstacle_info += std::to_string(obs.rear_left.x) + ',' + std::to_string(obs.rear_left.y) + '\n';
+        }
+        obstacle_info += '*'; // 消息结束符
+
+        const char* send_info1 = vehicle_info.c_str();
+        const char* send_info2 = obstacle_info.c_str();
+        send(sock_client, send_info1, strlen(send_info1), 0);
+        send(sock_client, send_info2, strlen(send_info2), 0);
 
         char recv_info[50];
         recv(sock_client, recv_info, sizeof(recv_info), 0);
