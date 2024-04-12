@@ -2,6 +2,7 @@
 #define VEHICLE_H
 
 #include <vector>
+#include <algorithm>
 #include "map.h"
 #include "lon_mpc_solver.h"
 #include "lat_mpc_solver.h"
@@ -13,8 +14,11 @@ public:
     point pos_f;//Frenet坐标系质心位置
     int map_index = 0; //s方向位置对应的地图点，主要是为了减少不必要的重复搜索
     int refer_line_index = 0;//最近的参考点索引，每次更新参考线时更新
+    int state = 0; //车辆运动状态，0表示跟驰，1表示换道
+    bool is_curise = false; //巡航状态，false表示换道禁用
     double speed;
     double expect_speed;
+    double curise_speed; //巡航速度
     double acc;
     double jerk;
     double headingAngle;//行驶方向
@@ -39,11 +43,15 @@ public:
     Vehicle(){};
     Vehicle(point pos, double speed, double acc, double expect_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map);
     void drive();
+    void setCuriseMode();
     void ToFrenetMap(ROAD_MAP& map);
     void GetObstacleInSensoryRange();
     void saveVehicleState();
+    void updateReferenceLine();
     void CruiseControl();
+    int checkLaneID(point pos);
     int checkRefPoint(int curr_point_index, double vehicle_pos_x, ReferenceLine& refer_line);
+    double IDMBasedSpeed(double front_vehicle_speed, point front_vehicle_pos);
     ~Vehicle(){};
 };
 
