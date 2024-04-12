@@ -33,6 +33,13 @@ def receive_messages(connection):
 
 
 def VisualServer():
+    # 可视化模式选择
+    visual_mode = input("Please input the visual mode(0:FullMsgVisual, 1:PlanningTrajectoryVisual): ")
+    while visual_mode != '0' and visual_mode != '1':
+        print("Error with visual mode, please input again.")
+        visual_mode = input("Please input the visual mode(0:FullMsgVisual, 1:PlanningTrajectoryVisual): ")
+
+    
     # 创建一个TCP套接字
     # 这一行创建了一个套接字（socket），并将其赋值给变量 server。
     # socket.socket() 函数用于创建套接字对象，AF_INET 参数指定了使用IPv4地址族，SOCK_STREAM 参数指定了使用TCP协议。
@@ -46,39 +53,15 @@ def VisualServer():
         columns.append('y' + str(i))
     vehicle_data = pd.DataFrame(columns=columns)
     boundryx = []
+    boundry_sensory = []
     boundry1 = []
     boundry2 = []
     boundry3 = []
-    boundry_front_1 = [0] * 450
-    boundry_front_2 = [3.5] * 450
-    boundry_front_3 = [7] * 450
-    data_index = 0
-
-    fig, axs = plt.subplots(5, 1, figsize=(10, 8))
+    if visual_mode == '0':
+        fig, axs = plt.subplots(5, 1, figsize=(10, 8))
+    else:
+        fig, ax = plt.subplots(1, 1,figsize=(15, 2))
     while True:
-        # recv_str = ""
-        # msg_idx = 0
-        # msg_length = 0
-        # while True:
-        #     # 当接收到的数据长度超出设定值，会导致数据被切割产生错误,所以首先接收消息长度
-        #     # if msg_idx == 0:
-        #     #     part = connection.recv(1025).decode("ascii")
-        #     #     msg_length = int(part) + 1024
-        #     #     msg_idx += 1
-        #     #     continue
-        #     # else:
-        #     #     part = connection.recv(msg_length).decode("ascii")
-        #     part = connection.recv(1024).decode("ascii")
-        #     if not part:
-        #         break
-        #     recv_str += part
-        #     if '\n' in part:
-        #         break
-        # print(index)
-        # index += 1
-        # info_list = recv_str.split('\n')
-        # vehicle_info = info_list[0]  # 车辆信息
-        # obstacle_info = info_list[1] if len(info_list) > 1 else None # 障碍物信息
         msg = receive_messages(connection)
         
         vehicle_data.loc[len(vehicle_data)] = msg[0]
@@ -99,81 +82,137 @@ def VisualServer():
         else:
             while boundryx[-1] < vehicle_data.iloc[-1, 0] + 25:
                 boundryx.append(boundryx[-1] + 0.1)
+        if len(boundry_sensory) == 0:
+            boundry_sensory.append(vehicle_data.iloc[0, 0])
+        else:
+            while boundry_sensory[-1] < vehicle_data.iloc[-1, 0] + 150:
+                boundry_sensory.append(boundry_sensory[-1] + 0.1)
+            while boundry_sensory[0] < vehicle_data.iloc[-1, 0]:
+                boundry_sensory.pop(0)
+
         boundry1 = [0] * len(boundryx)
         boundry2 = [3.5] * len(boundryx)
         boundry3 = [7] * len(boundryx)
 
 
-        axs[0].cla()  # 清空子图
-        axs[1].cla()  
-        axs[2].cla()  
-        axs[3].cla()  
-        axs[4].cla()  
+        # 全状态显示
+        def FullMsgVisual():
+            axs[0].cla()  # 清空子图
+            axs[1].cla()  
+            axs[2].cla()  
+            axs[3].cla()  
+            axs[4].cla()  
 
-        """绘制车辆轨迹"""
-        axs[0].plot(vehicle_data.iloc[:, 0], vehicle_data.iloc[:, 1],'-b') # 行驶轨迹
-        axs[0].plot(boundryx, boundry1, color='k') 
-        axs[0].plot(boundryx, boundry2, color='k')
-        axs[0].plot(boundryx, boundry3, color='k')
-        axs[0].set_title('Trajectory')
-        axs[0].set_xlabel('X(m)')
-        axs[0].set_ylabel('y(m)')
+            """绘制车辆轨迹"""
+            axs[0].plot(vehicle_data.iloc[:, 0], vehicle_data.iloc[:, 1],'-b') # 行驶轨迹
+            axs[0].plot(boundryx, boundry1, color='k') 
+            axs[0].plot(boundryx, boundry2, color='k')
+            axs[0].plot(boundryx, boundry3, color='k')
+            axs[0].set_title('Trajectory')
+            axs[0].set_xlabel('X(m)')
+            axs[0].set_ylabel('y(m)')
 
-        """绘制车辆姿态"""
-        """以下顶点计算方法适用于小转向角"""
-        boundry_front = [(vehicle_data.iloc[-1, 0] - 5 + 0.1 * i) for i in range(450)]
-        axs[1].plot(boundryx, boundry1, color='k') 
-        axs[1].plot(boundryx, boundry2, color='k')
-        axs[1].plot(boundryx, boundry3, color='k')
-        dia_angle = delta + vehicle_data.iloc[-1, 3]
-        lower_left = (vehicle_data.iloc[-1, 0] - half_diagonal * math.cos(dia_angle), 
-                      vehicle_data.iloc[-1, 1] - half_diagonal * math.sin(dia_angle)) # 左下顶点
-        lower_right = (lower_left[0] + vehicle_length * math.cos(vehicle_data.iloc[-1, 3]), 
-                       lower_left[1] + vehicle_length * math.sin(vehicle_data.iloc[-1, 3])) # 右下顶点
-        upper_left = (lower_left[0] - vehicle_width * math.sin(vehicle_data.iloc[-1, 3]), 
-                      lower_left[1] + vehicle_width * math.cos(vehicle_data.iloc[-1, 3]))
-        upper_right = (lower_left[0] + 2 * half_diagonal * math.cos(dia_angle), 
-                      lower_left[1] + 2 * half_diagonal * math.sin(dia_angle))
-        rect = patches.Polygon([lower_left, lower_right, upper_right, upper_left], closed=True, edgecolor='r', facecolor='none')
-        axs[1].add_patch(rect)  # 将矩形添加到当前子图中
-        for obstacle in obstacle_data:
-            rect = patches.Polygon([(obstacle[0], obstacle[1]), (obstacle[2], obstacle[3]), 
-                                    (obstacle[4], obstacle[5]), (obstacle[6], obstacle[7])], 
-                                    closed=True, edgecolor='r', facecolor='none')
-            axs[1].add_patch(rect)
-        # 绘制规划轨迹和参考线
-        planning_trajectory_x = []
-        planning_trajectory_y = []
-        for i in range(20):
-            planning_trajectory_x.append(vehicle_data.iloc[-1, 5 + 2 * i])
-            planning_trajectory_y.append(vehicle_data.iloc[-1, 6 + 2 * i])
-        axs[1].plot(planning_trajectory_x, planning_trajectory_y, color='b')
-        axs[1].plot(refer_line_data_x, refer_line_data_y, color='g')
+            """绘制车辆姿态"""
+            """以下顶点计算方法适用于小转向角"""
+            axs[1].plot(boundry_sensory, [0] * len(boundry_sensory), color='k') 
+            axs[1].plot(boundry_sensory, [3.5] * len(boundry_sensory), color='k')
+            axs[1].plot(boundry_sensory, [7] * len(boundry_sensory), color='k')
+            dia_angle = delta + vehicle_data.iloc[-1, 3]
+            lower_left = (vehicle_data.iloc[-1, 0] - half_diagonal * math.cos(dia_angle), 
+                        vehicle_data.iloc[-1, 1] - half_diagonal * math.sin(dia_angle)) # 左下顶点
+            lower_right = (lower_left[0] + vehicle_length * math.cos(vehicle_data.iloc[-1, 3]), 
+                        lower_left[1] + vehicle_length * math.sin(vehicle_data.iloc[-1, 3])) # 右下顶点
+            upper_left = (lower_left[0] - vehicle_width * math.sin(vehicle_data.iloc[-1, 3]), 
+                        lower_left[1] + vehicle_width * math.cos(vehicle_data.iloc[-1, 3]))
+            upper_right = (lower_left[0] + 2 * half_diagonal * math.cos(dia_angle), 
+                        lower_left[1] + 2 * half_diagonal * math.sin(dia_angle))
+            rect = patches.Polygon([lower_left, lower_right, upper_right, upper_left], closed=True, edgecolor='r', facecolor='none')
+            axs[1].add_patch(rect)  # 将矩形添加到当前子图中
+            for obstacle in obstacle_data:
+                rect = patches.Polygon([(obstacle[0], obstacle[1]), (obstacle[2], obstacle[3]), 
+                                        (obstacle[4], obstacle[5]), (obstacle[6], obstacle[7])], 
+                                        closed=True, edgecolor='r', facecolor='none')
+                axs[1].add_patch(rect)
+            # 绘制规划轨迹和参考线
+            planning_trajectory_x = []
+            planning_trajectory_y = []
+            for i in range(20):
+                planning_trajectory_x.append(vehicle_data.iloc[-1, 5 + 2 * i])
+                planning_trajectory_y.append(vehicle_data.iloc[-1, 6 + 2 * i])
+            axs[1].plot(planning_trajectory_x, planning_trajectory_y, color='b')
+            axs[1].plot(refer_line_data_x, refer_line_data_y, color='g')
 
-        axs[1].set_title('Realtime Position(m)')
-        axs[1].set_xlabel('X(m)')
-        axs[1].set_ylabel('y(m)')
+            axs[1].set_title('Realtime Position(m)')
+            axs[1].set_xlabel('X(m)')
+            axs[1].set_ylabel('y(m)')
 
-        """绘制车辆速度"""
-        axs[2].plot(vehicle_data.iloc[:, 2], '-b') # 行驶轨迹
-        axs[2].set_title('Realtime Speed')
-        axs[2].set_xlabel('Time(0.1s)')
-        axs[2].set_ylabel('Speed(m/s)')
+            """绘制车辆速度"""
+            axs[2].plot(vehicle_data.iloc[:, 2], '-b') # 行驶轨迹
+            axs[2].set_title('Realtime Speed')
+            axs[2].set_xlabel('Time(0.1s)')
+            axs[2].set_ylabel('Speed(m/s)')
 
-        """绘制车辆航向角"""
-        axs[3].plot(vehicle_data.iloc[:, 3], '-b') 
-        axs[3].set_title('Realtime Heading Angle')
-        axs[3].set_xlabel('Time(0.1s)')
-        axs[3].set_ylabel('Angle(rad)')
+            """绘制车辆航向角"""
+            axs[3].plot(vehicle_data.iloc[:, 3], '-b') 
+            axs[3].set_title('Realtime Heading Angle')
+            axs[3].set_xlabel('Time(0.1s)')
+            axs[3].set_ylabel('Angle(rad)')
 
-        """绘制车辆轮胎转角"""
-        axs[4].plot(vehicle_data.iloc[:, 4], '-b')
-        axs[4].set_title('Realtime Wheel Angle')
-        axs[4].set_xlabel('Time(0.1s)')
-        axs[4].set_ylabel('Angle(rad)')
+            """绘制车辆轮胎转角"""
+            axs[4].plot(vehicle_data.iloc[:, 4], '-b')
+            axs[4].set_title('Realtime Wheel Angle')
+            axs[4].set_xlabel('Time(0.1s)')
+            axs[4].set_ylabel('Angle(rad)')
+            
+            plt.pause(0.01)
+            plt.tight_layout()
+            
         
-        plt.pause(0.01)
-        plt.tight_layout()
+        
+        # 实时参考线、规划轨迹、障碍物显示
+        def PlanningTrajectoryVisual():
+            ax.cla()
+            """绘制车辆姿态"""
+            """以下顶点计算方法适用于小转向角"""
+            ax.plot(boundry_sensory, [0] * len(boundry_sensory), color='k') 
+            ax.plot(boundry_sensory, [3.5] * len(boundry_sensory), color='k')
+            ax.plot(boundry_sensory, [7] * len(boundry_sensory), color='k')
+            dia_angle = delta + vehicle_data.iloc[-1, 3]
+            lower_left = (vehicle_data.iloc[-1, 0] - half_diagonal * math.cos(dia_angle), 
+                        vehicle_data.iloc[-1, 1] - half_diagonal * math.sin(dia_angle)) # 左下顶点
+            lower_right = (lower_left[0] + vehicle_length * math.cos(vehicle_data.iloc[-1, 3]), 
+                        lower_left[1] + vehicle_length * math.sin(vehicle_data.iloc[-1, 3])) # 右下顶点
+            upper_left = (lower_left[0] - vehicle_width * math.sin(vehicle_data.iloc[-1, 3]), 
+                        lower_left[1] + vehicle_width * math.cos(vehicle_data.iloc[-1, 3]))
+            upper_right = (lower_left[0] + 2 * half_diagonal * math.cos(dia_angle), 
+                        lower_left[1] + 2 * half_diagonal * math.sin(dia_angle))
+            rect = patches.Polygon([lower_left, lower_right, upper_right, upper_left], closed=True, edgecolor='r', facecolor='none')
+            ax.add_patch(rect)  # 将矩形添加到当前子图中
+            for obstacle in obstacle_data:
+                rect = patches.Polygon([(obstacle[0], obstacle[1]), (obstacle[2], obstacle[3]), 
+                                        (obstacle[4], obstacle[5]), (obstacle[6], obstacle[7])], 
+                                        closed=True, edgecolor='r', facecolor='none')
+                ax.add_patch(rect)
+            # 绘制规划轨迹和参考线
+            planning_trajectory_x = []
+            planning_trajectory_y = []
+            for i in range(20):
+                planning_trajectory_x.append(vehicle_data.iloc[-1, 5 + 2 * i])
+                planning_trajectory_y.append(vehicle_data.iloc[-1, 6 + 2 * i])
+            ax.plot(planning_trajectory_x, planning_trajectory_y, color='b')
+            ax.plot(refer_line_data_x, refer_line_data_y, color='g')
+
+            ax.set_title('Realtime Position(m)')
+            ax.set_xlabel('X(m)')
+            ax.set_ylabel('y(m)')
+            plt.pause(0.01)
+            plt.tight_layout()
+        
+        if visual_mode == '0':
+            FullMsgVisual()
+        elif visual_mode == '1':
+            PlanningTrajectoryVisual()
+
         send_str = "Visual Server is running"
         connection.send(bytes(send_str, encoding="ascii"))
         # time.sleep(0.1)
