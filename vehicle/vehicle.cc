@@ -1,17 +1,17 @@
 #include "vehicle.h"
 
-Vehicle::Vehicle(point pos, double speed, double acc, double expect_speed, 
+Vehicle::Vehicle(point pos, double speed, double acc, double curise_speed, 
                 double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map){
     this->pos_c = pos;
     this->speed = speed;
     this->acc = acc;
     this->jerk = 0;
-    this->expect_speed = expect_speed;
+    this->curise_speed = curise_speed;
+    this->expect_speed = curise_speed;
     this->headingAngle = headingAngle;
     this->headingAngleRate = headingAngleRate;
     this->wheelAngle = wheelAngle;
     this->map = map;
-    this->refer_line = ReferenceLine(this->pos_c, this->speed, this->expect_speed, this->width, this->map);
     for(int i = 0; i < 20; i++){
         this->planning_trajectory += std::to_string(pos.x + this->speed * 0.1 * i) + ',' + std::to_string(pos.y) + ',';
     }
@@ -54,11 +54,16 @@ void Vehicle::saveVehicleState(){
 // 获取感知范围内障碍物，用于可视化
 void Vehicle::GetObstacleInSensoryRange(){
     this->obstacle_in_range.clear();
+    this->obstacle_in_lane1.clear();
+    this->obstacle_in_lane2.clear();
+
     // 查找通讯范围内的障碍物
     for(auto& obs : this->map.static_obstacle){
         // 如果在通讯范围内
         if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x){
             this->obstacle_in_range.emplace_back(obs);
+            if(this->checkLaneID(obs.pos) == 1) this->obstacle_in_lane1.emplace_back(obs);
+            else this->obstacle_in_lane2.emplace_back(obs);
         }
     }
 
@@ -67,11 +72,19 @@ void Vehicle::GetObstacleInSensoryRange(){
         // 如果在通讯范围内
         if(obs.pos.x <= this->pos_c.x + this->sensoryRange && obs.pos.x >= this->pos_c.x){
             this->obstacle_in_range.emplace_back(obs);
+            if(this->checkLaneID(obs.pos) == 1) this->obstacle_in_lane1.emplace_back(obs);
+            else this->obstacle_in_lane2.emplace_back(obs);
         }
     }
 
     // 按x方向位置排序
     sort(this->obstacle_in_range.begin(), this->obstacle_in_range.end(), [](Obstacle a, Obstacle b){
+        return a.pos.x < b.pos.x;
+    });
+    sort(this->obstacle_in_lane1.begin(), this->obstacle_in_lane1.end(), [](Obstacle a, Obstacle b){
+        return a.pos.x < b.pos.x;
+    });
+    sort(this->obstacle_in_lane2.begin(), this->obstacle_in_lane2.end(), [](Obstacle a, Obstacle b){
         return a.pos.x < b.pos.x;
     });
 }
@@ -87,40 +100,76 @@ int Vehicle::checkLaneID(point pos){
 double Vehicle::IDMBasedSpeed(double front_vehicle_speed, point front_vehicle_pos){
     double expect_following_distance = 10 + std::max(0., this->speed * 0.6 + 
                                                     0.5 * this->speed * (this->speed - front_vehicle_speed) / std::pow(this->MAX_ACCELERATION * 3, 0.5));
-    double acc = this->MAX_ACCELERATION * (1 - std::pow(this->speed / front_vehicle_speed, 4) 
-                                            - std::pow(expect_following_distance / (front_vehicle_pos.x - this->pos_c.x), 2));
-    return this->speed + acc * 2;
+    double acc = this->MAX_ACCELERATION * (1 - std::pow(this->speed / (this->curise_speed + 0.001), 4) 
+                                            - std::pow(expect_following_distance / (front_vehicle_pos.x - this->pos_c.x + 0.001), 2));
+    return (this->speed + acc * 2) >= 0 ? (this->speed + acc * 2) : 0;
+}
+
+
+void Vehicle::InsertLaneFollowPoint(double length){
+    int num = (int)(length / 0.1);
+    for(int i = 0; i < num; i++){
+        point tmp(this->refer_line.back().x + 0.1, this->refer_line.back().y);
+        this->refer_line.emplace_back(tmp);
+    }
+}
+
+
+void Vehicle::InsertLaneChangePoint(point start_point, point end_point){
+    int res = int((end_point.x - start_point.x - rear_buffer) / point_gap);
+    double delta_y = (end_point.y - start_point.y) / res;
+    for(int i = 1; i <= res; i++){
+        point tmp(start_point.x + point_gap * i, start_point.y + delta_y * i);
+        this->refer_line.emplace_back(tmp);
+    }
 }
 
 
 void Vehicle::updateReferenceLine(){
-    this->GetObstacleInSensoryRange();
-    std::vector<Obstacle> obstacle_in_current_lane; //存储自车所在车道障碍物
-    std::vector<Obstacle> obstacle_in_target_lane; //存储另一车道障碍物
+    int lane_id = this->checkLaneID(this->pos_c);
+    double line_length = this->speed * 2 + 30;
 
-    //处于巡航状态,只检查当前车道前方障碍物，基于IDM模型设置target_speed
-    if(this->is_curise){
-        // 查找所在车道
-        int lane_id = this->checkLaneID(this->pos_c);
-
-        for(auto& obs : this->obstacle_in_range){
-            if(this->checkLaneID(obs.pos) == lane_id){
-                obstacle_in_current_lane.emplace_back(obs);
-                break;
-            }
-        }
-
-        // 没有前车设置目标速度为巡航速度
-        if(obstacle_in_current_lane.size() == 0){
-            this->expect_speed = this->curise_speed;
-        }
-        // 存在前车设置目标速度为前车速度
-        else{
-            this->expect_speed = this->IDMBasedSpeed(obstacle_in_current_lane[0].speed, obstacle_in_current_lane[0].pos);
-        }
+    //处于巡航状态或不需要换道,只检查当前车道前方障碍物
+    if(this->is_curise || !this->state){
+        this->refer_line.clear();
+        point tmp(this->pos_c.x, 1.75);
+        if(lane_id == 2) tmp.y = 5.25;
+        // 存在障碍物且间距小于line_length，更新line_length长度
+        if(lane_id == 1 && this->obstacle_in_lane1.size() != 0 && this->obstacle_in_lane1[0].pos.x - this->pos_c.x  + 10 < line_length)
+            line_length = this->obstacle_in_lane1[0].pos.x - this->pos_c.x - 10;
+        if(lane_id == 2 && this->obstacle_in_lane2.size() != 0 && this->obstacle_in_lane2[0].pos.x - this->pos_c.x  + 10 < line_length)
+            line_length = this->obstacle_in_lane2[0].pos.x - this->pos_c.x - 10;
+        this->refer_line.emplace_back(tmp);
+        this->InsertLaneFollowPoint(line_length);
     }
-    else{
-
+    //切换目标车道中心线为参考线,换道期间只更新一次
+    else {
+        this->state++;
+        this->refer_line.clear();
+        point tmp(this->pos_c.x, 1.75);
+        point end_point;
+        if(this->target_lane == 1) tmp.y = 5.25;
+        // 存在障碍物且间距小于line_length，更新line_length长度
+        if(this->target_lane == 1){
+            if(this->obstacle_in_lane1.size() != 0 && this->obstacle_in_lane1[0].pos.x - this->pos_c.x  + 10 < line_length){
+                line_length = this->obstacle_in_lane1[0].pos.x - this->pos_c.x - 10;
+            }
+            end_point.x = this->obstacle_in_lane2[0].rear_left.x;
+            end_point.y = 1.75;
+        }
+        if(this->target_lane == 2){
+            if(this->obstacle_in_lane2.size() != 0 && this->obstacle_in_lane2[0].pos.x - this->pos_c.x  + 10 < line_length){
+                line_length = this->obstacle_in_lane2[0].pos.x - this->pos_c.x - 10;
+            }
+            end_point.x = this->obstacle_in_lane1[0].rear_left.x;
+            end_point.y = 5.25;
+        }
+        this->refer_line.emplace_back(tmp);
+        this->InsertLaneChangePoint(this->refer_line.back(), end_point);
+        double res_line_length = line_length - this->refer_line.back().x + this->refer_line.front().x;
+        res_line_length = res_line_length < 10 ? 10 : res_line_length;
+        this->InsertLaneFollowPoint(res_line_length);
+        
     }
     
 }
@@ -130,9 +179,9 @@ void CruiseControl(ROAD_MAP& m){
 
 }
 
-int Vehicle::checkRefPoint(int curr_point_index, double vehicle_pos_x, ReferenceLine& refer_line){
-    int res = curr_point_index;
-    while(vehicle_pos_x > refer_line.refer_line[res].x){
+int Vehicle::checkRefPoint(double vehicle_pos_x){
+    int res = 0;
+    while(vehicle_pos_x > this->refer_line[res].x){
         res++;
     }
     return res;
@@ -141,17 +190,54 @@ int Vehicle::checkRefPoint(int curr_point_index, double vehicle_pos_x, Reference
 
 void Vehicle::drive(){
     this->GetObstacleInSensoryRange();
+    // 非巡航状态下，前方静止障碍物或运动速度小于给定curise_speed，TTC小于阈值，且目标车道没有障碍物进入换道状态
+    int lane_id = this->checkLaneID(this->pos_c);
+    if(!this->state && !this->is_curise){
+        if(lane_id == 1 && this->obstacle_in_lane1.size() != 0 && (!this->obstacle_in_lane1[0].is_dynamic || this->obstacle_in_lane1[0].speed < this->curise_speed)){
+            double TTC = (this->obstacle_in_lane1[0].pos.x - this->pos_c.x) / (this->speed - this->obstacle_in_lane1[0].speed + 0.001);
+            if(0 <= TTC && TTC <= 5 + 0.7 * this->speed && 
+                (this->obstacle_in_lane2.size() == 0 || this->obstacle_in_lane2[0].pos.x > this->obstacle_in_lane1[0].pos.x)){
+                    this->state = 1;
+                    this->target_lane = 2;
+            }
+        }
+        if(lane_id == 2 && this->obstacle_in_lane2.size() != 0 && (!this->obstacle_in_lane2[0].is_dynamic || this->obstacle_in_lane2[0].speed < this->curise_speed)){
+            double TTC = (this->obstacle_in_lane2[0].pos.x - this->pos_c.x) / (this->speed - this->obstacle_in_lane2[0].speed + 0.001);
+            if(0 <= TTC && TTC <= 5 + 0.7 * this->speed && 
+                (this->obstacle_in_lane1.size() == 0 || this->obstacle_in_lane1[0].pos.x > this->obstacle_in_lane2[0].pos.x)){
+                    this->state = 1;
+                    this->target_lane = 1;
+            }
+        }
+        
+    }
+    if(this->state == 0 || this->state == 1) this->updateReferenceLine();
+    // 更新expect_speed
+    // 跟车采用idm模型生成expect_speed,换道过程保持初始速度
+    if(this->state == 0 || this->is_curise){
+        if(lane_id == 1){
+            if(this->obstacle_in_lane1.size() == 0) this->expect_speed = this->curise_speed;
+            else this->expect_speed = this->IDMBasedSpeed(obstacle_in_lane1[0].speed, obstacle_in_lane1[0].pos);
+        }
+        if(lane_id == 2){
+            if(this->obstacle_in_lane2.size() == 0) this->expect_speed = this->curise_speed;
+            else this->expect_speed = this->IDMBasedSpeed(obstacle_in_lane2[0].speed, obstacle_in_lane2[0].pos);
+        }
+    }
+    else{
+        if(this->expect_speed == 0) this->expect_speed = 1;
+    }
     // 更新车辆位置
     //基于当前位置向前查找参考点
     std::vector<std::vector<double>> refer_point;
     for(int i = 1; i < 21; i++){
         // 向前搜索参考线上参考点索引
-        int index = this->checkRefPoint(this->refer_line_index, this->pos_c.x + this->expect_speed * i / 10, this->refer_line);
-        refer_point.push_back({this->refer_line.refer_line[index].x, 
-                               this->refer_line.refer_line[index].y,
+        int index = this->checkRefPoint(this->pos_c.x + this->expect_speed * i / 10);
+        refer_point.push_back({this->refer_line[index].x, 
+                               this->refer_line[index].y,
                                this->expect_speed,
-                               (double)atan2((this->refer_line.refer_line[index].y - this->refer_line.refer_line[index - 1].y),
-                                             (this->refer_line.refer_line[index].x - this->refer_line.refer_line[index - 1].x))});
+                               (double)atan2((this->refer_line[index].y - this->refer_line[index - 1].y),
+                                             (this->refer_line[index].x - this->refer_line[index - 1].x))});
     }
     //纵向mpc求解器
     casadi::DM j = LonMpcSolver(this->pos_c.x, this->speed, this->acc, refer_point.back()[0], 
@@ -168,13 +254,15 @@ void Vehicle::drive(){
     //TODO：设置横向位置边界约束,需要修改为动态的
     std::vector<double> lower_l;
     std::vector<double> upper_l;
-    if(refer_point[0][1] == this->map.middleline1[0].y){
-        lower_l.resize(20, this->map.boundary1[0].y);
-        upper_l.resize(20, this->map.boundary2[0].y);
-    }
-    else if(refer_point[0][1] == this->map.middleline2[0].y){
-        lower_l.resize(20, this->map.boundary2[0].y);
-        upper_l.resize(20, this->map.boundary3[0].y);
+    if(!this->state){
+        if(lane_id == 1){
+            lower_l.resize(20, this->map.boundary1[0].y);
+            upper_l.resize(20, this->map.boundary2[0].y);
+        }
+        else{
+            lower_l.resize(20, this->map.boundary2[0].y);
+            upper_l.resize(20, this->map.boundary3[0].y);
+        }
     }
     else{
         lower_l.resize(20, this->map.boundary1[0].y);
@@ -207,15 +295,19 @@ void Vehicle::drive(){
     this->speed += this->acc * 0.1;
     this->acc += (double)j(0);
     this->saveVehicleState();
-    int new_refer_line_index = this->refer_line_index;
-    while(refer_line.refer_line[new_refer_line_index].x < this->pos_c.x) new_refer_line_index++;
-    this->refer_line_index = new_refer_line_index;
     this->map.updateDynamicObstacle();
 
-
-    if(this->refer_line_index > 30){
-        this->refer_line.update(this->pos_c, this->speed, this->expect_speed, this->refer_line_index, this->width, this->refer_line.refer_line, this->map);
-        this->refer_line_index = 0;
+    // 结束换道
+    if(this->state == 2){
+        if(this->target_lane == 1 && abs(this->pos_c.y - 1.75) < 0.1){
+            this->state = 0;
+            this->target_lane = -1;
+        }
+        if(this->target_lane == 2 && abs(this->pos_c.y - 5.25) < 0.1){
+            this->state = 0;
+            this->target_lane = -1;
+        }
     }
+    
 }
 

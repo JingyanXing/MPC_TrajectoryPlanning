@@ -38,7 +38,7 @@ DM LonMpcSolver(double curr_s, double curr_v, double curr_a, double ref_s, doubl
     SX R = SX::zeros(1,1);
     Q(0,0) = 2;
     Q(1,1) = 10;
-    Q(2,2) = 2;
+    Q(2,2) = 4;
     R(0,0) = 0.5;
 
     // 代价函数

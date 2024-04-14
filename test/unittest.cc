@@ -73,7 +73,7 @@ void Test::latSolverUnitTest(){
         vehicle.drive();
     }
 
-    saveLaneToCSV(vehicle.refer_line.refer_line, "latSolverUnitTest_refer_lane.csv");
+    saveLaneToCSV(vehicle.refer_line, "latSolverUnitTest_refer_lane.csv");
     std::cout << "参考线已保存至 ../data/latSolverUnitTest_refer_lane.csv" << std::endl;
     std::cout << "车辆状态已保存至 ../data/vehiclestate.csv" << std::endl;
     std::cout << "--------------横纵向mpc求解器单元测试完成--------------" << std::endl;
@@ -129,9 +129,9 @@ void Test::run(Vehicle& vehicle, int step){
         }
 
         std::string refer_line_info = "";
-        for(int i = 0; i < vehicle.refer_line.refer_line.size(); i++){
+        for(int i = 0; i < vehicle.refer_line.size(); i++){
             if(i % 10 == 0) 
-                refer_line_info += std::to_string(vehicle.refer_line.refer_line[i].x) + ',' + std::to_string(vehicle.refer_line.refer_line[i].y) + ',';
+                refer_line_info += std::to_string(vehicle.refer_line[i].x) + ',' + std::to_string(vehicle.refer_line[i].y) + ',';
         }
         refer_line_info.pop_back();
         refer_line_info += '\n'; 

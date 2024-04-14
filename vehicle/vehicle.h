@@ -12,13 +12,12 @@ class Vehicle{
 public:
     point pos_c;//笛卡尔坐标系质心位置
     point pos_f;//Frenet坐标系质心位置
-    int map_index = 0; //s方向位置对应的地图点，主要是为了减少不必要的重复搜索
-    int refer_line_index = 0;//最近的参考点索引，每次更新参考线时更新
-    int state = 0; //车辆运动状态，0表示跟驰，1表示换道
+    int state = 0; //车辆运动状态，0表示跟驰，1表示开始换道，2表示正在换道
+    int target_lane = -1; // 目标车道，这一值辅助参考线切换
     bool is_curise = false; //巡航状态，false表示换道禁用
     double speed;
-    double expect_speed;
-    double curise_speed; //巡航速度
+    double expect_speed;  //期望速度，主要用于纵向求解器求解
+    double curise_speed; //巡航速度，给定的期望行驶速度，全程不变
     double acc;
     double jerk;
     double headingAngle;//行驶方向
@@ -35,13 +34,16 @@ public:
     double MAX_ACCELERATION = 3;//最大加速度
     double MAX_DECELERATION = 7;//最大减速度
     double MAX_JERK = 3;//最大加加速度
-    ReferenceLine refer_line;//参考线
+    std::vector<point> refer_line;//参考线
     ROAD_MAP map;
     std::string planning_trajectory = "";
     std::vector<Obstacle> obstacle_in_range; //存储感知范围内所有障碍物
+    std::vector<Obstacle> obstacle_in_lane1; //存储感知范围内当前车道障碍物
+    std::vector<Obstacle> obstacle_in_lane2; //存储感知范围内目标车道障碍物
+
 
     Vehicle(){};
-    Vehicle(point pos, double speed, double acc, double expect_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map);
+    Vehicle(point pos, double speed, double acc, double curise_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map);
     void drive();
     void setCuriseMode();
     void ToFrenetMap(ROAD_MAP& map);
@@ -49,8 +51,10 @@ public:
     void saveVehicleState();
     void updateReferenceLine();
     void CruiseControl();
+    void InsertLaneFollowPoint(double length);
+    void InsertLaneChangePoint(point start_point, point end_point);
     int checkLaneID(point pos);
-    int checkRefPoint(int curr_point_index, double vehicle_pos_x, ReferenceLine& refer_line);
+    int checkRefPoint(double vehicle_pos_x);
     double IDMBasedSpeed(double front_vehicle_speed, point front_vehicle_pos);
     ~Vehicle(){};
 };
