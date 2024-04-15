@@ -98,7 +98,7 @@ int Vehicle::checkLaneID(point pos){
 }
 
 double Vehicle::IDMBasedSpeed(double front_vehicle_speed, point front_vehicle_pos){
-    double expect_following_distance = 10 + std::max(0., this->speed * 0.6 + 
+    double expect_following_distance = 20 + std::max(0., this->speed * 1.2 + 
                                                     0.5 * this->speed * (this->speed - front_vehicle_speed) / std::pow(this->MAX_ACCELERATION * 3, 0.5));
     double acc = this->MAX_ACCELERATION * (1 - std::pow(this->speed / (this->curise_speed + 0.001), 4) 
                                             - std::pow(expect_following_distance / (front_vehicle_pos.x - this->pos_c.x + 0.001), 2));
@@ -175,9 +175,10 @@ void Vehicle::updateReferenceLine(){
 }
 
 
-void CruiseControl(ROAD_MAP& m){
-
+void Vehicle::setCuriseMode(){
+    this->is_curise = true;
 }
+
 
 int Vehicle::checkRefPoint(double vehicle_pos_x){
     int res = 0;

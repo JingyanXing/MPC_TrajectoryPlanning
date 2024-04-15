@@ -50,7 +50,6 @@ public:
     void GetObstacleInSensoryRange();
     void saveVehicleState();
     void updateReferenceLine();
-    void CruiseControl();
     void InsertLaneFollowPoint(double length);
     void InsertLaneChangePoint(point start_point, point end_point);
     int checkLaneID(point pos);
