@@ -15,12 +15,15 @@ def VehicleStateVisual():
 
     plt.figure(figsize=(10, 8))
     #pos
+    boundary_x = [0]
+    while(boundary_x[-1] < df_v.iloc[-1,0]):
+        boundary_x.append(boundary_x[-1] + 1)
     plt.subplot(5, 1, 1)
     plt.plot(df_v.iloc[:,0], df_v.iloc[:,1], '.', label='real position', color='b')
-    plt.plot(df_l.iloc[:, 0], df_l.iloc[:,1], '.', label='target position', color='r')
-    plt.plot([0] * len(df_v.iloc[:,0]), linestyle='-', color='k', label='boundary0')
-    plt.plot([3.5] * len(df_v.iloc[:,0]), linestyle='-', color='k', label='boundary1')
-    plt.plot([7] * len(df_v.iloc[:,0]), linestyle='-', color='k', label='boundary2')
+    # plt.plot(df_l.iloc[:, 0], df_l.iloc[:,1], '.', label='target position', color='r')
+    plt.plot(boundary_x, [0] * len(boundary_x), linestyle='-', color='k')
+    plt.plot(boundary_x, [3.5] * len(boundary_x), linestyle='-', color='k')
+    plt.plot(boundary_x, [7] * len(boundary_x), linestyle='-', color='k')
     plt.title('Position(m)')
     plt.xlabel('X(m)')
     plt.ylabel('y(m)')
@@ -28,7 +31,7 @@ def VehicleStateVisual():
 
     # speed
     ax2 = plt.subplot(5, 1, 2)
-    plt.plot(df_v.iloc[:,2], linestyle='-', color='b', label='real speed')
+    plt.plot(df_v.iloc[:,2], linestyle='-', color='b')
     plt.plot(df_v.iloc[:,4], linestyle='-', color='r', label='target speed')
     plt.title('Speed(m/s)')
     plt.xlabel('Step(0.1s)')
@@ -41,7 +44,7 @@ def VehicleStateVisual():
     plt.title('Acceleration(m/s^2)')
     plt.xlabel('Step(0.1s)')
     plt.ylabel('Acceleration(m)')
-    plt.legend()
+    plt.legend(loc = 'lower right')
 
     # heading
     ax4 = plt.subplot(5, 1, 4)
