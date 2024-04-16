@@ -143,7 +143,7 @@ void Vehicle::updateReferenceLine(){
         this->InsertLaneFollowPoint(line_length);
     }
     //切换目标车道中心线为参考线,换道期间只更新一次
-    else {
+    else if(this->state == 1){
         this->state++;
         this->refer_line.clear();
         point tmp(this->pos_c.x, 1.75);
@@ -171,6 +171,21 @@ void Vehicle::updateReferenceLine(){
         this->InsertLaneFollowPoint(res_line_length);
         
     }
+    // 换道期间参考线更新
+    else{
+        double length = this->pos_c.x - this->refer_line.front().x;
+        while(this->refer_line.front().x < this->pos_c.x){
+            this->refer_line.erase(this->refer_line.begin());
+        }
+        if(this->target_lane == 1 && this->obstacle_in_lane1.size() != 0){
+            length = std::min(length, this->obstacle_in_lane1[0].rear_left.x - this->refer_line.back().x - 5);
+        }
+        if(this->target_lane == 2 && this->obstacle_in_lane2.size() != 0){
+            length = std::min(length, this->obstacle_in_lane2[0].rear_left.x - this->refer_line.back().x - 5);
+        }
+        this->InsertLaneFollowPoint(length);
+        std::cout << "logic has been used" << std::endl;
+    }
     
 }
 
@@ -196,7 +211,7 @@ void Vehicle::drive(){
     if(!this->state && !this->is_curise){
         if(lane_id == 1 && this->obstacle_in_lane1.size() != 0 && (!this->obstacle_in_lane1[0].is_dynamic || this->obstacle_in_lane1[0].speed < this->curise_speed)){
             double TTC = (this->obstacle_in_lane1[0].pos.x - this->pos_c.x) / (this->speed - this->obstacle_in_lane1[0].speed + 0.001);
-            if(0 <= TTC && TTC <= 5 + 0.7 * this->speed && 
+            if(0 <= TTC && TTC <= 5 + 0.6 * this->speed && 
                 (this->obstacle_in_lane2.size() == 0 || this->obstacle_in_lane2[0].pos.x > this->obstacle_in_lane1[0].pos.x)){
                     this->state = 1;
                     this->target_lane = 2;
@@ -204,7 +219,7 @@ void Vehicle::drive(){
         }
         if(lane_id == 2 && this->obstacle_in_lane2.size() != 0 && (!this->obstacle_in_lane2[0].is_dynamic || this->obstacle_in_lane2[0].speed < this->curise_speed)){
             double TTC = (this->obstacle_in_lane2[0].pos.x - this->pos_c.x) / (this->speed - this->obstacle_in_lane2[0].speed + 0.001);
-            if(0 <= TTC && TTC <= 5 + 0.7 * this->speed && 
+            if(0 <= TTC && TTC <= 5 + 0.6 * this->speed && 
                 (this->obstacle_in_lane1.size() == 0 || this->obstacle_in_lane1[0].pos.x > this->obstacle_in_lane2[0].pos.x)){
                     this->state = 1;
                     this->target_lane = 1;
@@ -212,7 +227,8 @@ void Vehicle::drive(){
         }
         
     }
-    if(this->state == 0 || this->state == 1) this->updateReferenceLine();
+    std::cout << this->state << std::endl;
+    this->updateReferenceLine();
     // 更新expect_speed
     // 跟车采用idm模型生成expect_speed,换道过程保持初始速度
     if(this->state == 0 || this->is_curise){

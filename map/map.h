@@ -38,18 +38,4 @@ public:
     ~ROAD_MAP();
 };
 
-class ReferenceLine{
-public:
-    //当前参考线的生成逻辑较为简单，不能支持短距离多障碍物的连续避让
-    //支持短距离内单个静态障碍物避让，动态障碍物跟驰或超车
-    double sensoryRange = 150;//车辆感知范围，x方向150m
-    std::vector<point> refer_line;
-    std::unordered_set<std::string> obstacle_set; //已经搜索过的障碍物加入集合，防止重复搜索
-
-    void update(point pos, double ego_speed, double target_speed, int refer_line_index, double width, std::vector<point>& refer_line, ROAD_MAP& map);//车辆位置，车辆宽度
-    ReferenceLine(point pos, double ego_speed, double target_speed, double width, ROAD_MAP& map);
-    ReferenceLine();
-    ~ReferenceLine();
-};
-
 #endif

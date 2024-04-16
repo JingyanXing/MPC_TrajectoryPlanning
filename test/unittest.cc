@@ -1,56 +1,55 @@
 #include "unittest.h"
 
 
-int Test::checkRefPoint(int curr_point_index, double vehicle_pos_x, ReferenceLine& refer_line){
-    int res = curr_point_index;
-    while(vehicle_pos_x > refer_line.refer_line[res].x){
-        res++;
-    }
-    return res;
-}
-
 //纵向mpc求解器单元测试
-// void Test::lonSolverUnitTest(){
-//     std::cout << "----------------纵向mpc求解器单元测试----------------" << std::endl;
-//     point init_pos(0,1.75);
-//     Vehicle vehicle(init_pos, 0, 0, 5, 0, 0);
-//     std::vector<double> state = {0, 0, 0};
-//     std::vector<double> target_state = {0, 15, 0};
-//     std::vector<double> s;
-//     std::vector<double> v;
-//     std::vector<double> a;
-//     for(int i = 0; i < 200; i++){
-//         s.push_back(state[0]);
-//         v.push_back(state[1]);
-//         a.push_back(state[2]);
-//         casadi::DM j = LonMpcSolver(state[0], state[1], state[2], target_state[0], target_state[1], target_state[2], 
-//                                             vehicle.MAX_SPEED, vehicle.MAX_ACCELERATION, vehicle.MAX_DECELERATION, vehicle.MAX_JERK)(0);
-//         state[0] += 0.1 * state[1];
-//         state[1] += 0.1 * state[2];
-//         state[2] += (double)j;
-//         target_state[0] += 0.1 * target_state[1];
-//     }
-//     saveToCSV(s, "s.csv");
-//     saveToCSV(v, "v.csv");
-//     saveToCSV(a, "a.csv");
-//     std::cout << "---------------纵向mpc求解器单元测试完成---------------" << std::endl;
-//     system("python3 ../visual/lonSolverUnitTest.py");
-// }
-//横向mpc求解器单元测试
-void Test::latSolverUnitTest(){
-    std::cout << "----------------横纵向mpc求解器单元测试----------------" << std::endl;
-    //初始化车辆状态
+void Test::lonSolverUnitTest(){
+    std::cout << "----------------纵向mpc求解器单元测试----------------" << std::endl;
     point init_pos(0,1.75);
     Obstacle static_obs(0, point(40, 1.75), "s1");
     Obstacle static_obs1(0, point(100, 5.25), "s2");
     std::vector<Obstacle> static_obstacle = {static_obs, static_obs1};
     std::vector<Obstacle> dynamic_obstacle;
     ROAD_MAP road(300, static_obstacle, dynamic_obstacle);
+    Vehicle vehicle(init_pos, 0, 0, 5, 0, 0, 0, road);
+    std::vector<double> state = {0, 0, 0};
+    std::vector<double> target_state = {0, 15, 0};
+    std::vector<double> s;
+    std::vector<double> v;
+    std::vector<double> a;
+    for(int i = 0; i < 200; i++){
+        s.push_back(state[0]);
+        v.push_back(state[1]);
+        a.push_back(state[2]);
+        casadi::DM j = LonMpcSolver(state[0], state[1], state[2], target_state[0], target_state[1], target_state[2], 
+                                            vehicle.MAX_SPEED, vehicle.MAX_ACCELERATION, vehicle.MAX_DECELERATION, vehicle.MAX_JERK)(0);
+        state[0] += 0.1 * state[1];
+        state[1] += 0.1 * state[2];
+        state[2] += (double)j;
+        target_state[0] += 0.1 * target_state[1];
+    }
+    saveToCSV(s, "s.csv");
+    saveToCSV(v, "v.csv");
+    saveToCSV(a, "a.csv");
+    std::cout << "---------------纵向mpc求解器单元测试完成---------------" << std::endl;
+    system("python3 ../visual/lonSolverUnitTest.py");
+}
+
+
+//横向mpc求解器单元测试
+void Test::latSolverUnitTest(){
+    std::cout << "----------------横纵向mpc求解器单元测试----------------" << std::endl;
+    //初始化车辆状态
+    point init_pos(0,1.75);
+    // Obstacle static_obs(0, point(40, 1.75), "s1");
+    Obstacle static_obs1(0, point(80, 1.75), "s2");
+    std::vector<Obstacle> static_obstacle = {static_obs1};
+    std::vector<Obstacle> dynamic_obstacle;
+    ROAD_MAP road(300, static_obstacle, dynamic_obstacle);
     // if(!road.check_block()){
     //     std::cout << "地图道路阻塞，请重新指定生成！" << std::endl;
     //     return 0;
     // }
-    Vehicle vehicle(init_pos, 0, 0, 5, 0, 0, 0, road);
+    Vehicle vehicle(init_pos, 0, 0, 10, 0, 0, 0, road);
     // ReferenceLine refer_line(vehicle.pos_c, vehicle.width, road);
 
     //检查数据文件是否存在

@@ -11,7 +11,7 @@
 class Test
 {
 public:
-    int checkRefPoint(int curr_point_index, double vehicle_pos_x, ReferenceLine& refer_line);
+    int checkRefPoint(int curr_point_index, double vehicle_pos_x);
     void lonSolverUnitTest();
     void latSolverUnitTest();
     void run(Vehicle& vehicle, int step);
