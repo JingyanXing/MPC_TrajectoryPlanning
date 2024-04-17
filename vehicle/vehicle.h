@@ -26,6 +26,10 @@ public:
     double length = 5;//车长
     double width = 1.9;//车辆宽度
     double wheelBase = 3.8;//轴距
+    double weight = 1500;//车辆总质量,kg
+    double front_wheel_corner_stiffness = 25000;//前轮转向刚度
+    double rear_wheel_corner_stiffness = 25000;//后轮转向刚度
+    double moment_of_inertia = 0.5; //转动惯量
     double sensoryRange = 150;//感知范围, 感知其他车辆质心位置
     double MAX_WHEELANGLE = PI / 4;//最大轮胎转角那个
     double MAX_WHEELANGLE_RATE = PI / 6;//轮胎最大转向速率, 30度
