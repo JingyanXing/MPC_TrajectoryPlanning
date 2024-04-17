@@ -184,7 +184,6 @@ void Vehicle::updateReferenceLine(){
             length = std::min(length, this->obstacle_in_lane2[0].rear_left.x - this->refer_line.back().x - 5);
         }
         this->InsertLaneFollowPoint(length);
-        std::cout << "logic has been used" << std::endl;
     }
     
 }
@@ -192,6 +191,11 @@ void Vehicle::updateReferenceLine(){
 
 void Vehicle::setCuriseMode(){
     this->is_curise = true;
+}
+
+
+void Vehicle::setLatMpcMode(int mode){
+    this->lat_solver_mode = mode;
 }
 
 
@@ -227,7 +231,6 @@ void Vehicle::drive(){
         }
         
     }
-    std::cout << this->state << std::endl;
     this->updateReferenceLine();
     // 更新expect_speed
     // 跟车采用idm模型生成expect_speed,换道过程保持初始速度
@@ -287,32 +290,66 @@ void Vehicle::drive(){
     }
 
     //横向mpc求解器
-    casadi::DM heading_angle_rate_dot = LatMpcSolver(this->pos_c.x, this->pos_c.y, this->headingAngle, this->headingAngleRate, refer_point.back()[0], 
+    if(this->lat_solver_mode == 0){
+        casadi::DM heading_angle_rate_dot = LatMpcSolver(this->pos_c.x, this->pos_c.y, this->headingAngle, this->headingAngleRate, refer_point.back()[0], 
                                                     refer_point.back()[1], refer_point.back()[3], refer_point.back()[3] - refer_point[19][3], 
                                                     ref_speed, lower_l, upper_l, this->MAX_WHEELANGLE, this->MAX_HEADINGANGLE,this->MAX_SPEED, this->wheelBase);
-    //更新规划轨迹
-    std::vector<double> tmp_state = {this->pos_c.x, this->pos_c.y, this->speed, this->acc, this->headingAngle, this->headingAngleRate};
-    this->planning_trajectory.clear();
-    for(int i = 1; i <= 20; i++){
-        tmp_state[0] += tmp_state[2] * 0.1 * cos(tmp_state[4]);
-        tmp_state[1] += tmp_state[2] * 0.1 * sin(tmp_state[4]);
-        tmp_state[2] += tmp_state[3] * 0.1;
-        tmp_state[3] += (double)j(i - 1);
-        tmp_state[4] += tmp_state[5] * 0.1;
-        tmp_state[5] += (double)heading_angle_rate_dot(i - 1) * 0.1;
-        this->planning_trajectory += std::to_string(tmp_state[0]) + ',' + std::to_string(tmp_state[1]) + ',';
+        //更新规划轨迹
+        std::vector<double> tmp_state = {this->pos_c.x, this->pos_c.y, this->speed, this->acc, this->headingAngle, this->headingAngleRate};
+        this->planning_trajectory.clear();
+        for(int i = 1; i <= 20; i++){
+            tmp_state[0] += tmp_state[2] * 0.1 * cos(tmp_state[4]);
+            tmp_state[1] += tmp_state[2] * 0.1 * sin(tmp_state[4]);
+            tmp_state[2] += tmp_state[3] * 0.1;
+            tmp_state[3] += (double)j(i - 1);
+            tmp_state[4] += tmp_state[5] * 0.1;
+            tmp_state[5] += (double)heading_angle_rate_dot(i - 1) * 0.1;
+            this->planning_trajectory += std::to_string(tmp_state[0]) + ',' + std::to_string(tmp_state[1]) + ',';
+        }
+        this->planning_trajectory.pop_back();
+        //更新车辆状态
+        this->pos_c.x += this->speed * 0.1 * cos(this->headingAngle);
+        this->pos_c.y += this->speed * 0.1 * sin(this->headingAngle);
+        this->headingAngle += this->headingAngleRate * 0.1;
+        this->headingAngleRate += (double)heading_angle_rate_dot(0) * 0.1;
+        this->wheelAngle = (double)atan2((double)heading_angle_rate_dot(0) * this->wheelBase, this->speed + 0.001); //避免速度为0
+        this->speed += this->acc * 0.1;
+        this->acc += (double)j(0);
+        this->saveVehicleState();
+        this->map.updateDynamicObstacle();
     }
-    this->planning_trajectory.pop_back();
-    //更新车辆状态
-    this->pos_c.x += this->speed * 0.1 * cos(this->headingAngle);
-    this->pos_c.y += this->speed * 0.1 * sin(this->headingAngle);
-    this->headingAngle += this->headingAngleRate * 0.1;
-    this->headingAngleRate += (double)heading_angle_rate_dot(0) * 0.1;
-    this->wheelAngle = (double)atan2((double)heading_angle_rate_dot(0) * this->wheelBase, this->speed + 0.001); //避免速度为0
-    this->speed += this->acc * 0.1;
-    this->acc += (double)j(0);
-    this->saveVehicleState();
-    this->map.updateDynamicObstacle();
+    else if(this->lat_solver_mode == 1){
+        casadi::DM wheel_angle_dot = LatMpcSolverWheelAngle(this->pos_c.y, this->speed * sin(this->headingAngle), this->headingAngle, this->headingAngleRate,
+                                                            refer_point.back()[1], 0, refer_point.back()[3], refer_point.back()[3] - refer_point[19][3], this->wheelAngle,
+                                                            ref_speed, lower_l, upper_l, this->MAX_WHEELANGLE, this->MAX_HEADINGANGLE, this->MAX_SPEED, this->wheelBase, this->weight,
+                                                            this->front_wheel_corner_stiffness, this->rear_wheel_corner_stiffness, this->moment_of_inertia);
+        //更新规划轨迹
+        std::vector<double> tmp_state = {this->pos_c.x, this->pos_c.y, this->speed, this->acc, this->headingAngle, this->headingAngleRate, this->wheelAngle};
+        this->planning_trajectory.clear();
+        for(int i = 1; i <= 20; i++){
+            tmp_state[5] += tmp_state[2] * tan(tmp_state[6]) / this->wheelBase * 0.1;
+            tmp_state[0] += tmp_state[2] * 0.1 * cos(tmp_state[4]);
+            tmp_state[1] += tmp_state[2] * 0.1 * sin(tmp_state[4]);
+            tmp_state[2] += tmp_state[3] * 0.1;
+            tmp_state[3] += (double)j(i - 1);
+            tmp_state[4] += tmp_state[5] * 0.1;
+            tmp_state[6] += (double)wheel_angle_dot(i - 1);
+            this->planning_trajectory += std::to_string(tmp_state[0]) + ',' + std::to_string(tmp_state[1]) + ',';
+        }
+        this->planning_trajectory.pop_back();
+        //更新车辆状态
+        std::cout << (double)wheel_angle_dot(0) << std::endl;
+        this->pos_c.x += this->speed * 0.1 * cos(this->headingAngle);
+        this->pos_c.y += this->speed * 0.1 * sin(this->headingAngle);
+        this->headingAngle += this->headingAngleRate * 0.1;
+        this->headingAngleRate += this->speed * tan(this->wheelAngle) / this->wheelBase * 0.1;
+        this->wheelAngle += (double)wheel_angle_dot(0); //避免速度为0
+        this->speed += this->acc * 0.1;
+        this->acc += (double)j(0);
+        this->saveVehicleState();
+        this->map.updateDynamicObstacle();
+    }
+    
 
     // 结束换道
     if(this->state == 2){

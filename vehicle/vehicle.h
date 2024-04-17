@@ -14,6 +14,7 @@ public:
     point pos_f;//Frenet坐标系质心位置
     int state = 0; //车辆运动状态，0表示跟驰，1表示开始换道，2表示正在换道
     int target_lane = -1; // 目标车道，这一值辅助参考线切换
+    int lat_solver_mode = 0; // 横向规划MPC模型切换
     bool is_curise = false; //巡航状态，false表示换道禁用
     double speed;
     double expect_speed;  //期望速度，主要用于纵向求解器求解
@@ -50,6 +51,7 @@ public:
     Vehicle(point pos, double speed, double acc, double curise_speed, double headingAngle, double headingAngleRate, double wheelAngle, ROAD_MAP& map);
     void drive();
     void setCuriseMode();
+    void setLatMpcMode(int mode);
     void ToFrenetMap(ROAD_MAP& map);
     void GetObstacleInSensoryRange();
     void saveVehicleState();
