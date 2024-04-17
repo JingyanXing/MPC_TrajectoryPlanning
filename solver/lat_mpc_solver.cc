@@ -128,7 +128,8 @@ casadi::DM LatMpcSolverWheelAngle(
       curr_l, curr_l_rate, curr_heading_angle, curr_heading_angle_rate,
       ref_l,  ref_l_rate,  ref_heading_angle,  ref_heading_angle_rate};
   for (double& ref : ref_speed) {
-    parameters.emplace_back(ref);
+    if(ref < 0.01) parameters.emplace_back(0.01);
+    else parameters.emplace_back(ref);
   }
   SX P = SX::sym("P", parameters.size());
 
@@ -158,7 +159,7 @@ casadi::DM LatMpcSolverWheelAngle(
                     - 0.5 * pow(wheelbase, 2) * (front_wheel_corner_stiffness + rear_wheel_corner_stiffness) / (moment_of_inertia * P(8 + i)) * X(Slice(), i)(3)
                     + wheelbase * front_wheel_corner_stiffness / moment_of_inertia * U(i));
   }
-
+  
   // 预测函数
   Function predict_f = Function("predict_f", {reshape(U, -1, 1), P}, {X},
                                 {"input_U", "parameter"}, {"states"});
@@ -178,7 +179,7 @@ casadi::DM LatMpcSolverWheelAngle(
   SX cost_f = SX::sym("cost_f");
   cost_f = 0;
   for (int i = 0; i < N; i++) {
-    SX states_err = X(Slice(), i) - P(Slice(4, 8, 1));  // 从索引 3 开始（包含索引 3），到索引 6 结束（不包含索引 6），以步长 1 选择元素。
+    SX states_err = X(Slice(), i) - P(Slice(4, 8, 1));  // 从索引 4 开始（包含索引 4），到索引 8 结束（不包含索引 8），以步长 1 选择元素。
     cost_f = cost_f + SX::mtimes({states_err.T(), Q, states_err}) +
              SX::mtimes({U(i).T(), R, U(i)});  // 这里用控制量输入大小衡量
   }
@@ -189,15 +190,17 @@ casadi::DM LatMpcSolverWheelAngle(
   SX g;
 
   for (int i = 0; i < N; i++) {
-    lbx.push_back(max(-MAX_WHEELANGLE, wheelangle - step_length * MAX_WHEELANGLE * (i + 1)));
-    ubx.push_back(min(MAX_WHEELANGLE, wheelangle + step_length * MAX_WHEELANGLE * (i + 1)));
+    // lbx.push_back(max(-MAX_WHEELANGLE, wheelangle - step_length * MAX_WHEELANGLE * (i + 1)));
+    // ubx.push_back(min(MAX_WHEELANGLE, wheelangle + step_length * MAX_WHEELANGLE * (i + 1)));
+    lbx.push_back(-MAX_HEADINGANGLE);
+    ubx.push_back(MAX_HEADINGANGLE);
     g = vertcat(g, X(Slice(), i));
     lbg.push_back(lower_l[i]);
     lbg.push_back(-5);
     lbg.push_back(-MAX_HEADINGANGLE);
     lbg.push_back(-MAX_SPEED * tan(MAX_WHEELANGLE) / wheelbase);
-    ubg.push_back(curr_s + (i + 1) * step_length * MAX_SPEED);
     ubg.push_back(upper_l[i]);
+    ubg.push_back(5);
     ubg.push_back(MAX_HEADINGANGLE);
     ubg.push_back(MAX_SPEED * tan(MAX_WHEELANGLE) / wheelbase);
   }
@@ -209,7 +212,7 @@ casadi::DM LatMpcSolverWheelAngle(
   qp_opts["expand"] =
       true;  // 设置了求解器选项 expand 的值为
              // true。这个选项表示是否将所有符号变量和函数进行展开，以加速求解。
-  qp_opts["ipopt.max_iter"] = 10;  // 最大迭代次数为
+  qp_opts["ipopt.max_iter"] = 100;  // 最大迭代次数为
   qp_opts["ipopt.print_level"] =
       0;  // 设置了 ipopt 求解器的打印级别为
           // 0。这个选项控制了求解器在求解过程中输出的详细程度，0
