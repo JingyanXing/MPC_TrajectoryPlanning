@@ -17,11 +17,11 @@ casadi::DM LatMpcSolver(double curr_s, double curr_l, double curr_heading_angle,
 
 casadi::DM LatMpcSolverWheelAngle(
     double curr_l, double curr_l_rate, double curr_heading_angle,
-    double curr_heading_angle_rate, double ref_l, double ref_l_rate,
-    double ref_heading_angle, double ref_heading_angle_rate, double wheelangle,
-    std::vector<double> ref_speed, std::vector<double> lower_l,
-    std::vector<double> upper_l, double MAX_WHEELANGLE, double MAX_HEADINGANGLE,
-    double MAX_SPEED, double wheelbase,double vehicle_weigth,
+    double curr_heading_angle_rate, double wheelangle,
+    std::vector<std::vector<double>> refer_point, std::vector<double> ref_speed,
+    std::vector<double> lower_l, std::vector<double> upper_l,
+    double MAX_WHEELANGLE, double MAX_WHEELANGLE_RATE, double MAX_HEADINGANGLE,
+    double MAX_SPEED, double wheelbase, double vehicle_weigth,
     double front_wheel_corner_stiffness, double rear_wheel_corner_stiffness,
     double moment_of_inertia);
 
